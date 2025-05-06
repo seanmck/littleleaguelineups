@@ -1,0 +1,37 @@
+# === Node ===
+node_modules/
+
+# === Vite ===
+**/.vite/
+
+# === Tailwind JIT ===
+**/.tailwind/
+
+# === Build output ===
+**/dist/
+
+# === Logs ===
+npm-debug.log*
+*.log
+
+# === TypeScript ===
+**/*.tsbuildinfo
+
+# === Environment variables ===
+.env
+.env.*.local
+
+# === OS/Editor files ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*~
+
+# === IDEs ===
+.vscode/
+.idea/
+
+# === Coverage (if using test tools) ===
+**/coverage/
