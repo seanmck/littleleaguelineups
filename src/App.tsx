@@ -4,12 +4,23 @@ import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import { useStore } from './state/store';
+import { useEffect, useRef } from 'react';
 
 function App() {
   const selectedTeamId = useStore(state => state.selectedTeamId);
   const activeTeam = useStore(state =>
     state.teams.find(t => t.id === state.selectedTeamId)
   );
+
+  const loadDevData = useStore(state => state.loadDevData);
+  const hasLoaded = useRef(false);
+
+  useEffect(() => {
+    if (!hasLoaded.current && import.meta.env.DEV) {
+      loadDevData();
+      hasLoaded.current = true;
+    }
+  }, [loadDevData]);
 
   return (
     <Router>

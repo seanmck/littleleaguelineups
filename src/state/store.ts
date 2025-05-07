@@ -10,7 +10,9 @@ interface AppState {
   getActiveTeam: () => Team | null;
 
   addPlayerToActiveTeam: (name: string) => void;
-  addGameToActiveTeam: (date: string, playerIds: string[]) => void;
+  addGameToActiveTeam: (date: string, playerIds: string[]) => Game | null;
+
+  loadDevData: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -52,23 +54,59 @@ export const useStore = create<AppState>((set, get) => ({
 
   addGameToActiveTeam: (date, playerIds) => {
     const { selectedTeamId, teams } = get();
-    if (!selectedTeamId) return;
-
+    if (!selectedTeamId) return null;
+  
     const newGame: Game = {
       id: uuidv4(),
       date,
       playerIds,
     };
-
-    set({
-      teams: teams.map(team =>
-        team.id === selectedTeamId
-          ? {
-              ...team,
-              games: [...team.games, newGame],
-            }
-          : team
-      ),
+  
+    let createdGame: Game | null = null;
+  
+    const updatedTeams = teams.map(team => {
+      if (team.id === selectedTeamId) {
+        createdGame = newGame;
+        return {
+          ...team,
+          games: [...team.games, newGame],
+        };
+      }
+      return team;
     });
-  },
+  
+    set({ teams: updatedTeams });
+  
+    return createdGame;
+},  
+
+loadDevData: () => {
+  const teamId = uuidv4();
+  const players = ['Micah', 'Lorenzo', 'Elliott', 'Henry', 'Asher', 'Oliver', 'Miles', 'Sullivan', 'Will'].map(name => ({
+    id: uuidv4(),
+    name,
+  }));
+
+  const gameId = uuidv4();
+
+  const teams: Team[] = [
+    {
+      id: teamId,
+      name: 'Red Rockets',
+      players,
+      games: [
+        {
+          id: gameId,
+          date: '2025-05-10',
+          playerIds: players.map(p => p.id),
+        },
+      ],
+    },
+  ];
+
+  set({
+    teams,
+    selectedTeamId: teamId,
+  });
+},
 }));

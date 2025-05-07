@@ -19,11 +19,9 @@ function GameSetupPage() {
   };
 
   const handleSubmit = () => {
-    if (date && selectedPlayers.length > 0) {
-      addGame(date, selectedPlayers);
-      const game = activeTeam.games[activeTeam.games.length - 1]; // latest game
+    const game = addGame(date, selectedPlayers);
+    if (game) {
       navigate(`/games/${game.id}`);
-        
     }
   };
 
