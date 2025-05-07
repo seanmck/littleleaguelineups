@@ -1,9 +1,19 @@
+import { useEffect } from 'react';
 import { useState } from 'react';
 import { useStore } from '../state/store';
+import { useNavigate } from 'react-router-dom';
 
 function TeamSelectPage() {
-  const { teams, addTeam, selectTeam } = useStore();
+  const { teams, addTeam, selectTeam, selectedTeamId } = useStore();
   const [newTeamName, setNewTeamName] = useState('');
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (selectedTeamId) {
+      navigate('/roster');
+    }
+  }, [selectedTeamId, navigate]);
 
   const handleCreateTeam = () => {
     if (newTeamName.trim()) {
@@ -21,7 +31,10 @@ function TeamSelectPage() {
             <li key={team.id}>
               <button
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                onClick={() => selectTeam(team.id)}
+                onClick={() => {
+                  selectTeam(team.id);
+                  navigate('/roster');
+                }}                  
               >
                 {team.name}
               </button>
