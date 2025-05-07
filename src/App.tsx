@@ -1,12 +1,12 @@
-//import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import TeamSelectPage from './pages/TeamSelectPage';
 import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
-//import GameDetailPage from './pages/GameDetailPage';
+import GameDetailPage from './pages/GameDetailPage';
 import { useStore } from './state/store';
 
 function App() {
-  /*
+  
   const selectedTeamId = useStore(state => state.selectedTeamId);
 
   if (!selectedTeamId) {
@@ -32,16 +32,6 @@ function App() {
         </div>
       </main>
     </Router>
-  );
-}
-
-
-*/
-
-  return (
-    <div className="min-h-screen bg-blue-500 text-white flex items-center justify-center">
-      <h1 className="text-4xl font-bold">Tailwind is working!</h1>
-    </div>
   );
 }
 
