@@ -14,3 +14,10 @@ export interface Game {
   date: string;
   availablePlayerIds: string[];
 }
+
+export interface Team {
+  id: string;
+  name: string;
+  players: Player[];
+  games: Game[];
+}

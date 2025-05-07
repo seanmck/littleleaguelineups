@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../state/store';
+import { Link } from 'react-router-dom';
 
 function RosterPage() {
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -44,6 +45,12 @@ function RosterPage() {
           Add Player
         </button>
       </div>
+      <Link
+        to="/games"
+        className="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+      >
+        Go to Game Setup
+      </Link>
     </div>
   );
 }
