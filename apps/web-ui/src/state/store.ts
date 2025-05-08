@@ -83,6 +83,23 @@ export const useStore = create<AppState>((set, get) => ({
     return createdGame;
 },  
 
+updatePlayerInActiveTeam: (updatedPlayer: Player) =>
+  set((state) => {
+    const team = state.teams.find((t) => t.id === state.selectedTeamId);
+    if (!team) return {};
+    const updatedTeam: Team = {
+      ...team,
+      players: team.players.map((p) =>
+        p.id === updatedPlayer.id ? updatedPlayer : p
+      ),
+    };
+    return {
+      teams: state.teams.map((t) =>
+        t.id === team.id ? updatedTeam : t
+      ),
+    };
+  }),
+
 updateTeam: (updatedTeam: Team) => {
   const { teams } = get();
   const updatedTeams = teams.map(t => t.id === updatedTeam.id ? updatedTeam : t);
@@ -118,4 +135,7 @@ loadDevData: () => {
     selectedTeamId: teamId,
   });
 },
-}));
+})
+);
+
+

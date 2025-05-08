@@ -1,113 +1,112 @@
 import { useState } from 'react';
 import { useStore } from '../state/store';
-import { POSITIONS } from '../lib/lineupGenerator';
-import { Player, Position } from '../types';
+import { Position } from '../types';
 
 function RosterPage() {
   const selectedTeamId = useStore(state => state.selectedTeamId);
-  const team = useStore(state =>
-    state.teams.find(t => t.id === selectedTeamId)
+  const activeTeam = useStore(state =>
+    state.teams.find(t => t.id === state.selectedTeamId)
   );
-  const updateTeam = useStore(state => state.updateTeam);
+  const addPlayerToActiveTeam = useStore(state => state.addPlayerToActiveTeam);
+  const updatePlayerInActiveTeam = useStore(state => state.updatePlayerInActiveTeam);
+
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
 
-  if (!team) return <p>No team selected.</p>;
+  const [newPlayerName, setNewPlayerName] = useState('');
 
-  const updatePlayer = (playerId: string, updated: Partial<Player>) => {
-    const updatedPlayers = team.players.map(p =>
-      p.id === playerId ? { ...p, ...updated } : p
-    );
-    updateTeam({ ...team, players: updatedPlayers });
+  const handleAddPlayer = () => {
+    if (newPlayerName.trim()) {
+      addPlayerToActiveTeam(newPlayerName.trim());
+      setNewPlayerName('');
+    }
   };
 
-  const toggle = (list: Position[] | undefined, pos: Position): Position[] => {
-    return list?.includes(pos) ? list.filter(p => p !== pos) : [...(list || []), pos];
+  const togglePreference = (
+    playerId: string,
+    pos: Position,
+    type: 'preferred' | 'avoid'
+  ) => {
+    if (!activeTeam) return;
+    const player = activeTeam.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    const key = type === 'preferred' ? 'preferredPositions' : 'avoidPositions';
+    const existing = player[key] ?? [];
+
+    const updated = existing.includes(pos)
+      ? existing.filter(p => p !== pos)
+      : [...existing, pos];
+
+    updatePlayerInActiveTeam({
+      ...player,
+      [key]: updated,
+    });
   };
 
-  const toggleRole = (list: ('Pitcher' | 'Catcher')[] | undefined, role: 'Pitcher' | 'Catcher') => {
-    return list?.includes(role) ? list.filter(r => r !== role) : [...(list || []), role];
-  };
+  if (!activeTeam) return <p>No team selected.</p>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-6">
-      <h2 className="text-3xl font-bold text-blue-800">Team Roster</h2>
-      {team.players.map(player => (
-        <div key={player.id} className="border-t border-slate-200 pt-4 pb-6">
-          <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold">Team Roster: {activeTeam.name}</h2>
+
+      <ul className="divide-y divide-slate-200">
+        {activeTeam.players.map((player) => (
+          <li key={player.id} className="py-4">
+            
+            <div className="flex justify-between items-center">
             <span className="text-lg font-semibold text-slate-800">{player.name}</span>
             <button
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-blue-600 hover:underline px-4 py-2 rounded min-w-[160px]"
               onClick={() => setExpandedPlayerId(p => (p === player.id ? null : player.id))}
             >
               {expandedPlayerId === player.id ? 'Hide Preferences' : 'Manage Preferences'}
             </button>
           </div>
-
           {expandedPlayerId === player.id && (
-            <div className="mt-4 space-y-6 bg-slate-50 p-4 rounded">
-              <div>
-                <h4 className="text-sm font-semibold mb-2 text-slate-700">Preferred Positions</h4>
-                <div className="flex flex-wrap gap-3">
-                  {POSITIONS.map(pos => (
-                    <label key={pos} className="flex items-center gap-1 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={player.preferredPositions?.includes(pos) || false}
-                        onChange={() =>
-                          updatePlayer(player.id, {
-                            preferredPositions: toggle(player.preferredPositions, pos),
-                          })
-                        }
-                      />
-                      {pos}
-                    </label>
-                  ))}
+              <div className="flex flex-wrap gap-2 mt-1">
+              {(
+                ['P', 'C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF'] as Position[]
+              ).map((pos) => (
+                <div key={pos} className="text-xs">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={player.preferredPositions?.includes(pos) ?? false}
+                      onChange={() => togglePreference(player.id, pos, 'preferred')}
+                    />
+                    <span className="text-blue-800">{pos}</span>
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={player.avoidPositions?.includes(pos) ?? false}
+                      onChange={() => togglePreference(player.id, pos, 'avoid')}
+                    />
+                    <span className="text-red-700 line-through">{pos}</span>
+                  </label>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold mb-2 text-slate-700">Avoid Positions</h4>
-                <div className="flex flex-wrap gap-3">
-                  {POSITIONS.map(pos => (
-                    <label key={pos} className="flex items-center gap-1 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={player.avoidPositions?.includes(pos) || false}
-                        onChange={() =>
-                          updatePlayer(player.id, {
-                            avoidPositions: toggle(player.avoidPositions, pos),
-                          })
-                        }
-                      />
-                      {pos}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold mb-2 text-slate-700">Primary Roles</h4>
-                <div className="flex gap-4">
-                  {(['Pitcher', 'Catcher'] as const).map(role => (
-                    <label key={role} className="flex items-center gap-1 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={player.primaryRoles?.includes(role) || false}
-                        onChange={() =>
-                          updatePlayer(player.id, {
-                            primaryRoles: toggleRole(player.primaryRoles, role),
-                          })
-                        }
-                      />
-                      {role}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
-        </div>
-      ))}
+            )}            
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder="Player name"
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
+        <button
+          onClick={handleAddPlayer}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded whitespace-nowrap min-w-[160px]"
+        >
+          Add Player
+        </button>
+      </div>
     </div>
   );
 }
