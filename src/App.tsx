@@ -6,7 +6,7 @@ import GameDetailPage from './pages/GameDetailPage';
 import { useStore } from './state/store';
 import { useEffect, useRef } from 'react';
 import RosterPreferencesPage from './pages/RosterPreferencesPage';
-
+import GamesListPage from './pages/GamesListPage';
 
 function App() {
   const selectedTeamId = useStore(state => state.selectedTeamId);
@@ -51,18 +51,26 @@ function App() {
                     Roster
                   </Link>
                   <Link
-                    to="/games"
+                    to="/games/setup"
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
                   >
                     Game Setup
+                  </Link>
+                  <Link
+                    to="/games"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
+                  >
+                    Game Schedule
                   </Link>
                 </div>
               </header>
               <Routes>
                 <Route path="/" element={<Navigate to="/roster" />} />
                 <Route path="/roster" element={<RosterPage />} />
-                <Route path="/games" element={<GameSetupPage />} />
+                <Route path="/games" element={<GamesListPage />} />
+                <Route path="/games/setup" element={<GameSetupPage />} />
                 <Route path="/games/:gameId" element={<GameDetailPage />} />
+                
               </Routes>
             </>
           )}
