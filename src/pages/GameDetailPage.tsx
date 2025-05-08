@@ -14,37 +14,35 @@ function GameDetailPage() {
   const game = activeTeam?.games.find(g => g.id === gameId);
   const players = activeTeam?.players.filter(p => game?.playerIds.includes(p.id));
 
-  // TEMP: fake lineup generator
+  function buildPlayerLineup(
+    lineup: Record<number, Record<string, string>>,
+    players: { id: string; name: string }[]
+  ) {
+    
+    return players.map(player => {
+      const innings = [1, 2, 3, 4].map(inning => {
+        const assignments = lineup[inning] ?? {};
+        const position = Object.entries(assignments).find(
+          ([_, pid]) => pid === player.id
+        );
+        return position?.[0] ?? null;
+      });
+  
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        innings,
+      };
+    });
+  }
+
   const lineup = useMemo(() => {
-    if (!players) return [];
+    console.log("Stored game lineup:", game?.lineup);
+    if (!players || !game?.lineup) return [];
+    return buildPlayerLineup(game.lineup, players);
+  }, [game?.lineup, players]);
 
-    const playerCount = players.length;
-    const innings = 4;
-
-    const assigned: Record<string, (string | null)[]> = {};
-    for (const player of players) {
-      assigned[player.id] = new Array(innings).fill(null);
-    }
-
-    for (let inning = 0; inning < innings; inning++) {
-      const shuffled = [...players].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < Math.min(POSITIONS.length, shuffled.length); i++) {
-        const player = shuffled[i];
-        // Ensure no repeat positions
-        const usedPositions = assigned[player.id].slice(0, inning);
-        const available = POSITIONS.find(pos => !usedPositions.includes(pos));
-        if (available) assigned[player.id][inning] = available;
-      }
-    }
-
-    return players.map(player => ({
-      playerId: player.id,
-      playerName: player.name,
-      innings: assigned[player.id],
-    }));
-  }, [players]);
-
-  if (!game || !players) return <p>Game not found.</p>;
+  if (!game || !players) return <p>Game not found.</p>;  
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">

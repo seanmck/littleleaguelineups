@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { Team, Player, Game } from '../types';
+import { Lineup } from '../lib/lineupGenerator';
 
 interface AppState {
   teams: Team[];
@@ -52,7 +53,7 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  addGameToActiveTeam: (date, playerIds) => {
+  addGameToActiveTeam: (date, playerIds, lineup?: Lineup) => {
     const { selectedTeamId, teams } = get();
     if (!selectedTeamId) return null;
   
@@ -60,6 +61,7 @@ export const useStore = create<AppState>((set, get) => ({
       id: uuidv4(),
       date,
       playerIds,
+      lineup
     };
   
     let createdGame: Game | null = null;
@@ -92,7 +94,7 @@ loadDevData: () => {
   const teams: Team[] = [
     {
       id: teamId,
-      name: 'Red Rockets',
+      name: 'Roasted Sigmas',
       players,
       games: [
         {

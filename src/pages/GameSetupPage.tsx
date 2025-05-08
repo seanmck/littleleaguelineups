@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../state/store';
 import { useNavigate } from 'react-router-dom';
+import { generateLineup } from '../lib/lineupGenerator';
 
 function GameSetupPage() {
   const activeTeam = useStore(state => state.getActiveTeam());
@@ -11,7 +12,6 @@ function GameSetupPage() {
   );
   const navigate = useNavigate();
 
-
   const handleToggle = (id: string) => {
     setSelectedPlayers(prev =>
       prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
@@ -19,7 +19,8 @@ function GameSetupPage() {
   };
 
   const handleSubmit = () => {
-    const game = addGame(date, selectedPlayers);
+    const lineup = generateLineup(selectedPlayers, 4);
+    const game = addGame(date, selectedPlayers, lineup);
     if (game) {
       navigate(`/games/${game.id}`);
     }

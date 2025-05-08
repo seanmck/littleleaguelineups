@@ -1,3 +1,5 @@
+import { Lineup } from '../lib/lineupGenerator';
+
 export type Position = 'P' | 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF' | 'Bench';
 
 export interface Player {
@@ -12,7 +14,8 @@ export interface Player {
 export interface Game {
   id: string;
   date: string;
-  availablePlayerIds: string[];
+  playerIds: string[];
+  lineup?: Lineup; // <-- new optional field
 }
 
 export interface Team {
