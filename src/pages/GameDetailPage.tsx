@@ -1,12 +1,10 @@
 import { useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { useMemo } from 'react';
-
-const POSITIONS = ['P', 'C', '1B', 'SS', '3B', '2B', 'CF', 'LF', 'RF'];
+import { POSITION_POINTS } from '../lib/lineupGenerator';
 
 function GameDetailPage() {
   const { gameId } = useParams();
-  
   const selectedTeamId = useStore(state => state.selectedTeamId);
   const teams = useStore(state => state.teams);
 
@@ -18,7 +16,6 @@ function GameDetailPage() {
     lineup: Record<number, Record<string, string>>,
     players: { id: string; name: string }[]
   ) {
-    
     return players.map(player => {
       const innings = [1, 2, 3, 4].map(inning => {
         const assignments = lineup[inning] ?? {};
@@ -27,22 +24,27 @@ function GameDetailPage() {
         );
         return position?.[0] ?? null;
       });
-  
+
+      const funPoints = innings.reduce(
+        (sum, pos) => sum + (pos ? POSITION_POINTS[pos] || 0 : 0),
+        0
+      );
+
       return {
         playerId: player.id,
         playerName: player.name,
         innings,
+        funPoints,
       };
     });
   }
 
   const lineup = useMemo(() => {
-    console.log("Stored game lineup:", game?.lineup);
     if (!players || !game?.lineup) return [];
     return buildPlayerLineup(game.lineup, players);
   }, [game?.lineup, players]);
 
-  if (!game || !players) return <p>Game not found.</p>;  
+  if (!game || !players) return <p>Game not found.</p>;
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
@@ -55,6 +57,7 @@ function GameDetailPage() {
               {[1, 2, 3, 4].map(inning => (
                 <th key={inning} className="p-2 border-b text-center">Inning {inning}</th>
               ))}
+              <th className="p-2 border-b text-center">Fun Points</th>
             </tr>
           </thead>
           <tbody>
@@ -64,6 +67,7 @@ function GameDetailPage() {
                 {player.innings.map((pos, i) => (
                   <td key={i} className="p-2 border-b text-center">{pos ?? '-'}</td>
                 ))}
+                <td className="p-2 border-b text-center font-semibold">{player.funPoints}</td>
               </tr>
             ))}
           </tbody>
