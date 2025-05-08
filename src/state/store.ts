@@ -9,6 +9,7 @@ interface AppState {
   addTeam: (name: string) => void;
   selectTeam: (id: string) => void;
   getActiveTeam: () => Team | null;
+  updateTeam: (updatedTeam: Team) => void;
 
   addPlayerToActiveTeam: (name: string) => void;
   addGameToActiveTeam: (date: string, playerIds: string[]) => Game | null;
@@ -81,6 +82,12 @@ export const useStore = create<AppState>((set, get) => ({
   
     return createdGame;
 },  
+
+updateTeam: (updatedTeam: Team) => {
+  const { teams } = get();
+  const updatedTeams = teams.map(t => t.id === updatedTeam.id ? updatedTeam : t);
+  set({ teams: updatedTeams });
+},
 
 loadDevData: () => {
   const teamId = uuidv4();

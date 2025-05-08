@@ -19,7 +19,8 @@ function GameSetupPage() {
   };
 
   const handleSubmit = () => {
-    const lineup = generateLineup(selectedPlayers, 4);
+    const players = activeTeam?.players.filter(p => selectedPlayers.includes(p.id));
+    const lineup = generateLineup(players, 4);
     const game = addGame(date, selectedPlayers, lineup);
     if (game) {
       navigate(`/games/${game.id}`);

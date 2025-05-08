@@ -5,6 +5,8 @@ import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import { useStore } from './state/store';
 import { useEffect, useRef } from 'react';
+import RosterPreferencesPage from './pages/RosterPreferencesPage';
+
 
 function App() {
   const selectedTeamId = useStore(state => state.selectedTeamId);

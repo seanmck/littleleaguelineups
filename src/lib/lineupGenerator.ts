@@ -1,3 +1,5 @@
+import { Player, Position } from '../types';
+
 export const POSITIONS = ['P', 'C', '1B', 'SS', '3B', '2B', 'CF', 'LF', 'RF'];
 
 export type Lineup = {
@@ -6,34 +8,54 @@ export type Lineup = {
   };
 };
 
-export function generateLineup(players: string[], innings: number): Lineup {
-  const lineup: Lineup = {};
+export function generateLineup(players: Player[], innings: number): Lineup {
+    const lineup: Lineup = {};
+    const history: Record<string, Set<string>> = {};
+  
+    players.forEach(player => {
+      history[player.id] = new Set();
+    });
+  
+    for (let inning = 1; inning <= innings; inning++) {
+      const assignments: Record<string, string> = {};
+      const availablePlayers = [...players].sort(() => Math.random() - 0.5);
+      const used = new Set<string>();
+  
+    
 
-  const playerHistory: Record<string, Set<string>> = {};
-  for (const player of players) {
-    playerHistory[player] = new Set();
-  }
-
-  for (let inning = 1; inning <= innings; inning++) {
-    const inningAssignments: { [position: string]: string } = {};
-    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-    const usedPlayers = new Set<string>();
-
-    for (const position of POSITIONS) {
-      const player = shuffledPlayers.find(p =>
-        !usedPlayers.has(p) &&
-        !playerHistory[p].has(position)
-      );
-
-      if (player) {
-        inningAssignments[position] = player;
-        usedPlayers.add(player);
-        playerHistory[player].add(position);
+      for (const position of POSITIONS) {        
+        // Priority order:
+        // 1. Player prefers this position
+        // 2. Player does not avoid it
+        const eligible = availablePlayers.find(p => {
+          const alreadyUsed = used.has(p.id);
+          const avoided = p.avoidPositions?.includes(position as Position);
+          const alreadyPlayed = history[p.id].has(position);
+          return !alreadyUsed && !avoided && !alreadyPlayed;
+        });
+  
+        // Prefer preferred players among eligible
+        const preferred = availablePlayers.find(p => {
+          const alreadyUsed = used.has(p.id);
+          const isPreferred = p.preferredPositions?.includes(position as Position);
+          const avoided = p.avoidPositions?.includes(position as Position);
+          const alreadyPlayed = history[p.id].has(position as Position);
+          return (
+            !alreadyUsed && isPreferred && !avoided && !alreadyPlayed
+          );
+        });
+  
+        const selected = preferred || eligible;
+  
+        if (selected) {
+          assignments[position] = selected.id;
+          used.add(selected.id);
+          history[selected.id].add(position);
+        }
       }
+  
+      lineup[inning] = assignments;
     }
-
-    lineup[inning] = inningAssignments;
+  
+    return lineup;
   }
-
-  return lineup;
-}
