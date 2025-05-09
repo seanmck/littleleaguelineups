@@ -19,7 +19,7 @@ function App() {
 
   useEffect(() => {
     if (!hasLoaded.current && import.meta.env.DEV) {
-      loadDevData();
+      // loadDevData();
       hasLoaded.current = true;
     }
   }, [loadDevData]);

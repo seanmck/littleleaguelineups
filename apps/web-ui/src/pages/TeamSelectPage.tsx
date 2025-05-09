@@ -2,12 +2,23 @@ import { useEffect } from 'react';
 import { useState } from 'react';
 import { useStore } from '../state/store';
 import { useNavigate } from 'react-router-dom';
+import { Team } from '../types';
 
 function TeamSelectPage() {
-  const { teams, addTeam, selectTeam, selectedTeamId } = useStore();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
+  const [teams, setTeams] = useState<Team[]>([]);  
+  const { selectTeam, selectedTeamId } = useStore();
   const [newTeamName, setNewTeamName] = useState('');
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch(`${API_BASE}/teams`)
+      .then(res => res.json())
+      .then(setTeams)
+      .catch(err => console.error('Error fetching teams:', err));
+  }, []);
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -15,10 +26,21 @@ function TeamSelectPage() {
     }
   }, [selectedTeamId, navigate]);
 
-  const handleCreateTeam = () => {
-    if (newTeamName.trim()) {
-      addTeam(newTeamName.trim());
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTeamName.trim() })
+      });
+
+      const created = await res.json();
+      setTeams(prev => [...prev, created]);
       setNewTeamName('');
+      selectTeam(created.id);
+    } catch (err) {
+      console.error('Error creating team:', err);
     }
   };
 
