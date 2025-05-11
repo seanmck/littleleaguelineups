@@ -59,6 +59,11 @@ function TeamSelectPage() {
           type="text"
           value={newTeamName}
           onChange={e => setNewTeamName(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              handleCreateTeam(); // Trigger the button action
+            }
+          }}
           placeholder="Team name"
           className="border p-2 rounded w-full"
         />

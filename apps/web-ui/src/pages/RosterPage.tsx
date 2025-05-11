@@ -84,6 +84,11 @@ function RosterPage() {
         <input
           value={newPlayerName}
           onChange={e => setNewPlayerName(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              handleAddPlayer(); // Trigger the button action
+            }
+          }}
           className="border p-2 rounded w-full"
           placeholder="Player name"
         />

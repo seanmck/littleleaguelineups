@@ -20,6 +20,15 @@ if (process.env.NODE_ENV === 'development') {
         { id: nanoid(), name: 'Bob' },
         { id: nanoid(), name: 'Charlie' },
         { id: nanoid(), name: 'Diana' },
+        { id: nanoid(), name: 'Eve' },
+        { id: nanoid(), name: 'Frank' },
+        { id: nanoid(), name: 'Grace' },
+        { id: nanoid(), name: 'Hank' },
+        { id: nanoid(), name: 'Ivy' },
+        { id: nanoid(), name: 'Jack' },
+        { id: nanoid(), name: 'Kate' },
+        { id: nanoid(), name: 'Leo' },
+        { id: nanoid(), name: 'Mia' },
       ],
       games: [
         {
@@ -114,6 +123,7 @@ const generateLineup = (players) => {
 
   // Define the positions
   const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+  const outfieldPositions = ['LF', 'LCF', 'RCF', 'RF']; // Four outfielders for 10+ players
 
   // Shuffle function to randomize positions
   const shuffleArray = (array) => {
@@ -134,34 +144,48 @@ const generateLineup = (players) => {
   // Assign players to positions for 4 innings
   for (let inning = 1; inning <= 4; inning++) {
     lineup[inning] = {};
-    const shuffledPositions = shuffleArray(positions); // Shuffle positions for each inning
 
-    players.forEach((player) => {
-      // Filter positions based on avoidPositions
-      const avoidFilteredPositions = shuffledPositions.filter(
-        (pos) => !player.avoidPositions || !player.avoidPositions.includes(pos)
-      );
+    // Determine positions based on the number of players
+    const activePositions = players.length >= 10 ? [...positions.slice(0, 6), ...outfieldPositions] : positions;
+    const shuffledPositions = shuffleArray(activePositions); // Shuffle positions for each inning
 
-      // Prioritize preferred positions if available
-      const preferredPositions = avoidFilteredPositions.filter(
-        (pos) => player.preferredPositions && player.preferredPositions.includes(pos)
-      );
+    // Determine the number of bench players
+    const benchCount = players.length > activePositions.length ? players.length - activePositions.length : 0;
 
-      // Avoid assigning the same position as in previous innings
-      const nonRepeatingPositions = (preferredPositions.length > 0 ? preferredPositions : avoidFilteredPositions).filter(
-        (pos) => !playerPositionHistory[player.id].includes(pos)
-      );
+    // Assign positions to players
+    players.forEach((player, index) => {
+      if (index < activePositions.length) {
+        // Assign active positions
+        const avoidFilteredPositions = shuffledPositions.filter(
+          (pos) => !player.avoidPositions || !player.avoidPositions.includes(pos)
+        );
 
-      // Assign the first non-repeating position, or fallback to any avoid-filtered position
-      const position = nonRepeatingPositions[0] || avoidFilteredPositions[0];
+        const preferredPositions = avoidFilteredPositions.filter(
+          (pos) => player.preferredPositions && player.preferredPositions.includes(pos)
+        );
 
-      if (position) {
-        lineup[inning][position] = player.id;
-        playerPositionHistory[player.id].push(position); // Track assigned position
-        // Remove the assigned position from the shuffled list to avoid duplicates
-        shuffledPositions.splice(shuffledPositions.indexOf(position), 1);
+        const nonRepeatingPositions = (preferredPositions.length > 0 ? preferredPositions : avoidFilteredPositions).filter(
+          (pos) => !playerPositionHistory[player.id].includes(pos)
+        );
+
+        const position = nonRepeatingPositions[0] || avoidFilteredPositions[0];
+
+        if (position) {
+          lineup[inning][position] = player.id;
+          playerPositionHistory[player.id].push(position);
+          shuffledPositions.splice(shuffledPositions.indexOf(position), 1);
+        }
+      } else {
+        // Assign bench position
+        lineup[inning]['Bench'] = lineup[inning]['Bench'] || [];
+        lineup[inning]['Bench'].push(player.id);
       }
     });
+
+    // Rotate bench players for fairness
+    if (benchCount > 0) {
+      players.push(players.shift()); // Rotate the first player to the end of the array
+    }
   }
 
   return lineup;

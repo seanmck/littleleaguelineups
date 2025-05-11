@@ -51,10 +51,17 @@ function GameDetailPage() {
                 {[1, 2, 3, 4].map(inning => (
                   <td key={`${player.id}-${inning}`} className="p-2 border-b text-center">
                     {(() => {
-                      const position = Object.keys(game.lineup[inning] || {}).find(
-                        pos => game.lineup[inning][pos] === player.id
+                      const inningLineup = game.lineup[inning] || {};
+                      const position = Object.keys(inningLineup).find(
+                        pos => inningLineup[pos] === player.id
                       );
-                      return position ? position : '-'; // Display the position
+
+                      // Check if the player is on the bench
+                      if (inningLineup['Bench'] && inningLineup['Bench'].includes(player.id)) {
+                        return 'Bench';
+                      }
+
+                      return position ? position : '-'; // Display the position or "-"
                     })()}
                   </td>
                 ))}
