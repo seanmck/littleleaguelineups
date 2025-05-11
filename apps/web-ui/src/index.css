@@ -15,7 +15,7 @@ header {
   text-align: center;
 }
 
-button {
+button.custom-button {
   background-color: #4CAF50;
   color: white;
   border: none;

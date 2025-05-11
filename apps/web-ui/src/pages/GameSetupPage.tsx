@@ -1,62 +1,96 @@
-import { useState } from 'react';
-import { useStore } from '../state/store';
-import { useNavigate } from 'react-router-dom';
-import { generateLineup } from '../lib/lineupGenerator';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Player, Game } from '../types';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function GameSetupPage() {
-  const activeTeam = useStore(state => state.getActiveTeam());
-  const addGame = useStore(state => state.addGameToActiveTeam);
-  const [date, setDate] = useState('');
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>(
-    activeTeam ? activeTeam.players.map(p => p.id) : []
-  );
+  const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
 
-  const handleToggle = (id: string) => {
-    setSelectedPlayers(prev =>
-      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
+    if (!teamId) return;
+    fetch(`${API_BASE}/teams/${teamId}/players`)
+      .then(res => res.json())
+      .then(players => {
+        setPlayers(players);
+        setSelectedIds(players.map(player => player.id)); // Select all players by default
+      })
+      .catch(err => console.error('Error loading players:', err));
+  }, [teamId]);
+
+  const togglePlayer = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
-  const handleSubmit = () => {
-    const players = activeTeam?.players.filter(p => selectedPlayers.includes(p.id));
-    const lineup = generateLineup(players, 4);
-    const game = addGame(date, selectedPlayers, lineup);
-    if (game) {
-      navigate(`/games/${game.id}`);
+  const handleCreateGame = async () => {
+    if (!teamId || !date || selectedIds.length === 0) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/teams/${teamId}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, playerIds: selectedIds }),
+      });
+
+      const created: Game = await res.json();
+      navigate(`/teams/${teamId}/games/${created.id}`);
+    } catch (err) {
+      console.error('Error creating game:', err);
     }
   };
 
-  if (!activeTeam) return <p>No team selected.</p>;
+  if (!teamId) return <p>Team not found.</p>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-4">
-      <h2 className="text-xl font-bold">Game Setup</h2>
-      <input
-        type="date"
-        value={date}
-        onChange={e => setDate(e.target.value)}
-        className="border p-2 rounded w-full"
-      />
+    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
+      <h2 className="text-xl font-bold">Create New Game</h2>
 
-      <p className="text-slate-600 text-sm">Uncheck any players who will not be at the game:</p>
+      <label className="block">
+        <span className="text-sm font-medium">Game Date</span>
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="mt-1 block w-full border p-2 rounded"
+        />
+      </label>
 
-      <div className="pt-4 space-y-2">
-        {activeTeam.players.map(player => (
-          <label key={player.id} className="block">
-            <input
-              type="checkbox"
-              checked={selectedPlayers.includes(player.id)}
-              onChange={() => handleToggle(player.id)}
-              className="mr-2"
-            />
-            {player.name}
-          </label>
-        ))}
+      <div>
+        <h3 className="text-sm font-medium mb-2">Who's Coming?</h3>
+        <div className="space-y-2"> {/* Use vertical spacing */}
+          {players
+            .slice() // Create a shallow copy to avoid mutating the original array
+            .sort((a, b) => a.name.localeCompare(b.name)) // Sort players alphabetically by name
+            .map(p => (
+              <label
+                key={p.id}
+                className={`border p-2 rounded cursor-pointer flex items-center justify-between ${
+                  selectedIds.includes(p.id)
+                    ? 'bg-blue-100 border-blue-400'
+                    : 'bg-white border-slate-300'
+                }`}
+              >
+                <span>{p.name}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(p.id)}
+                  onChange={() => togglePlayer(p.id)}
+                />
+              </label>
+            ))}
+        </div>
       </div>
+
       <button
-        onClick={handleSubmit}
-        className="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+        onClick={handleCreateGame}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
       >
         Create Game
       </button>

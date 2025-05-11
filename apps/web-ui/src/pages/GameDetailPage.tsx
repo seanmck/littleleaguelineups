@@ -1,50 +1,35 @@
 import { useParams } from 'react-router-dom';
-import { useStore } from '../state/store';
-import { useMemo } from 'react';
-import { POSITION_POINTS } from '../lib/lineupGenerator';
+import { useEffect, useState } from 'react';
+
+interface Game {
+  id: string;
+  date: string;
+  lineup: Record<number, Record<string, string>>;
+  players: { id: string; name: string }[];
+}
 
 function GameDetailPage() {
-  const { gameId } = useParams();
-  const selectedTeamId = useStore(state => state.selectedTeamId);
-  const teams = useStore(state => state.teams);
+  const { gameId, teamId } = useParams();
+  const [game, setGame] = useState<Game | null>(null);
 
-  const activeTeam = teams.find(t => t.id === selectedTeamId);
-  const game = activeTeam?.games.find(g => g.id === gameId);
-  const players = activeTeam?.players.filter(p => game?.playerIds.includes(p.id));
+  useEffect(() => {
+    if (!teamId || !gameId) return;
 
-  function buildPlayerLineup(
-    lineup: Record<number, Record<string, string>>,
-    players: { id: string; name: string }[]
-  ) {
-    return players.map(player => {
-      const innings = [1, 2, 3, 4].map(inning => {
-        const assignments = lineup[inning] ?? {};
-        const position = Object.entries(assignments).find(
-          ([_, pid]) => pid === player.id
-        );
-        return position?.[0] ?? null;
-      });
+    console.log('Fetching game details for:', { teamId, gameId });
 
-      const funPoints = innings.reduce(
-        (sum, pos) => sum + (pos ? POSITION_POINTS[pos] || 0 : 0),
-        0
-      );
+    fetch(`/api/teams/${teamId}/games/${gameId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch game details');
+        return res.json();
+      })
+      .then(data => {
+        console.log('Fetched game data:', data);
+        setGame(data);
+      })
+      .catch(err => console.error('Error fetching game details:', err));
+  }, [teamId, gameId]);
 
-      return {
-        playerId: player.id,
-        playerName: player.name,
-        innings,
-        funPoints,
-      };
-    });
-  }
-
-  const lineup = useMemo(() => {
-    if (!players || !game?.lineup) return [];
-    return buildPlayerLineup(game.lineup, players);
-  }, [game?.lineup, players]);
-
-  if (!game || !players) return <p>Game not found.</p>;
+  if (!game) return <p>Loading game details...</p>;
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
@@ -57,17 +42,22 @@ function GameDetailPage() {
               {[1, 2, 3, 4].map(inning => (
                 <th key={inning} className="p-2 border-b text-center">Inning {inning}</th>
               ))}
-              <th className="p-2 border-b text-center">Fun Points</th>
             </tr>
           </thead>
           <tbody>
-            {lineup.map(player => (
-              <tr key={player.playerId}>
-                <td className="p-2 border-b font-medium">{player.playerName}</td>
-                {player.innings.map((pos, i) => (
-                  <td key={i} className="p-2 border-b text-center">{pos ?? '-'}</td>
+            {game.players.map(player => (
+              <tr key={player.id}>
+                <td className="p-2 border-b font-medium">{player.name}</td>
+                {[1, 2, 3, 4].map(inning => (
+                  <td key={`${player.id}-${inning}`} className="p-2 border-b text-center">
+                    {(() => {
+                      const position = Object.keys(game.lineup[inning] || {}).find(
+                        pos => game.lineup[inning][pos] === player.id
+                      );
+                      return position ? position : '-'; // Display the position
+                    })()}
+                  </td>
                 ))}
-                <td className="p-2 border-b text-center font-semibold">{player.funPoints}</td>
               </tr>
             ))}
           </tbody>

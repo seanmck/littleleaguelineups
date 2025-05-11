@@ -1,111 +1,135 @@
-import { useState } from 'react';
-import { useStore } from '../state/store';
-import { Position } from '../types';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Player, Team, Position } from '../types';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const POSITIONS: Position[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 
 function RosterPage() {
-  const selectedTeamId = useStore(state => state.selectedTeamId);
-  const activeTeam = useStore(state =>
-    state.teams.find(t => t.id === state.selectedTeamId)
-  );
-  const addPlayerToActiveTeam = useStore(state => state.addPlayerToActiveTeam);
-  const updatePlayerInActiveTeam = useStore(state => state.updatePlayerInActiveTeam);
-
-  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
-
+  const { teamId } = useParams<{ teamId: string }>();
+  const [team, setTeam] = useState<Team | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
 
-  const handleAddPlayer = () => {
-    if (newPlayerName.trim()) {
-      addPlayerToActiveTeam(newPlayerName.trim());
-      setNewPlayerName('');
-    }
+  useEffect(() => {
+    if (!teamId) return;
+
+    fetch(`${API_BASE}/teams/${teamId}`).then(res => res.json()).then(setTeam);
+    fetch(`${API_BASE}/teams/${teamId}/players`).then(res => res.json()).then(setPlayers);
+  }, [teamId]);
+
+  const handleAddPlayer = async () => {
+    if (!newPlayerName.trim() || !teamId) return;
+    const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newPlayerName.trim() }),
+    });
+    const created = await res.json();
+    setPlayers(p => [...p, created]);
+    setNewPlayerName('');
   };
 
-  const togglePreference = (
+  const togglePreference = async (
     playerId: string,
     pos: Position,
     type: 'preferred' | 'avoid'
   ) => {
-    if (!activeTeam) return;
-    const player = activeTeam.players.find(p => p.id === playerId);
-    if (!player) return;
-
+    const player = players.find(p => p.id === playerId);
+    if (!player || !teamId) return;
     const key = type === 'preferred' ? 'preferredPositions' : 'avoidPositions';
-    const existing = player[key] ?? [];
-
-    const updated = existing.includes(pos)
-      ? existing.filter(p => p !== pos)
-      : [...existing, pos];
-
-    updatePlayerInActiveTeam({
-      ...player,
-      [key]: updated,
+    const current = player[key] ?? [];
+    const updated = current.includes(pos)
+      ? current.filter(p => p !== pos)
+      : [...current, pos];
+    const updatedPlayer = { ...player, [key]: updated };
+    await fetch(`${API_BASE}/teams/${teamId}/players/${playerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedPlayer),
     });
+    setPlayers(prev => prev.map(p => (p.id === playerId ? updatedPlayer : p)));
   };
 
-  if (!activeTeam) return <p>No team selected.</p>;
+  if (!team) return <p>Loading team data...</p>;
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Team Roster: {activeTeam.name}</h2>
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold">Roster for {team.name}</h2>
 
-      <ul className="divide-y divide-slate-200">
-        {activeTeam.players.map((player) => (
-          <li key={player.id} className="py-4">
-            
-            <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-slate-800">{player.name}</span>
-            <button
-              className="text-sm text-blue-600 hover:underline px-4 py-2 rounded min-w-[160px]"
-              onClick={() => setExpandedPlayerId(p => (p === player.id ? null : player.id))}
-            >
-              {expandedPlayerId === player.id ? 'Hide Preferences' : 'Manage Preferences'}
-            </button>
-          </div>
-          {expandedPlayerId === player.id && (
-              <div className="flex flex-wrap gap-2 mt-1">
-              {(
-                ['P', 'C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF'] as Position[]
-              ).map((pos) => (
-                <div key={pos} className="text-xs">
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={player.preferredPositions?.includes(pos) ?? false}
-                      onChange={() => togglePreference(player.id, pos, 'preferred')}
-                    />
-                    <span className="text-blue-800">{pos}</span>
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={player.avoidPositions?.includes(pos) ?? false}
-                      onChange={() => togglePreference(player.id, pos, 'avoid')}
-                    />
-                    <span className="text-red-700 line-through">{pos}</span>
-                  </label>
-                </div>
-              ))}
+      <ul className="space-y-4">
+        {players.map(player => (
+          <li key={player.id} className="border p-4 rounded bg-white shadow">
+            <div className="font-medium mb-2">{player.name}</div>
+            <div className="grid grid-cols-2 gap-4">
+              <PreferenceButtons
+                title="Preferred Positions"
+                positions={POSITIONS}
+                selected={player.preferredPositions}
+                color="blue"
+                onClick={pos => togglePreference(player.id, pos, 'preferred')}
+              />
+              <PreferenceButtons
+                title="Avoid Positions"
+                positions={POSITIONS}
+                selected={player.avoidPositions}
+                color="red"
+                onClick={pos => togglePreference(player.id, pos, 'avoid')}
+              />
             </div>
-            )}            
           </li>
         ))}
       </ul>
-
       <div className="flex gap-2">
         <input
-          type="text"
-          placeholder="Player name"
           value={newPlayerName}
-          onChange={(e) => setNewPlayerName(e.target.value)}
+          onChange={e => setNewPlayerName(e.target.value)}
           className="border p-2 rounded w-full"
+          placeholder="Player name"
         />
         <button
           onClick={handleAddPlayer}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded whitespace-nowrap min-w-[160px]"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
         >
           Add Player
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PreferenceButtons({
+  title,
+  positions,
+  selected = [],
+  color,
+  onClick,
+}: {
+  title: string;
+  positions: Position[];
+  selected?: Position[];
+  color: string;
+  onClick: (pos: Position) => void;
+}) {
+  console.log({ title, positions, selected, color });
+  console.log({ selected });
+  return (
+    <div>
+      <div className="text-sm font-semibold mb-1">{title}</div>
+      <div className="flex flex-wrap gap-2">
+        {positions.map(pos => (
+          <button
+            key={pos}
+            onClick={() => onClick(pos)}
+            className={`text-xs px-3 py-1 border rounded transition-colors duration-200 ${
+              selected.includes(pos)
+                ? `bg-${color}-600 text-white border-${color}-600`
+                : `bg-white text-${color}-600 border-${color}-600 hover:bg-${color}-100`
+            }`}
+          >
+            {pos}
+          </button>
+        ))}
       </div>
     </div>
   );
