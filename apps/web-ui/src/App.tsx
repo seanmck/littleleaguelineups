@@ -4,6 +4,7 @@ import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import GamesListPage from './pages/GamesListPage';
+import LandingPage from './pages/LandingPage';
 
 import TeamLayout from './layouts/TeamLayout';
 
@@ -50,7 +51,7 @@ function App() {
         <main className="min-h-screen bg-gradient-to-br from-white to-sky-100 p-6 font-sans">
           <div className="max-w-3xl mx-auto">            
             <Routes>
-              <Route path="/" element={<TeamSelectPage />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/teams/:teamId" element={<TeamLayout />}>
                 <Route index element={<Navigate to="roster" />} />                
                 <Route path="/teams/:teamId/roster" element={<RosterPage />} />
