@@ -5,15 +5,28 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node dist/index.js",
+    "dev": "nodemon --watch ../../packages/types/src --exec ts-node-esm index.ts",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0",
+    "@lineup/types": "file:../../packages/types",
+    "@prisma/client": "^6.7.0",
     "cors": "^2.8.5",
-    "nanoid": "^4.0.2"
+    "express": "^4.21.2",
+    "nanoid": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.18",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.15.17",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

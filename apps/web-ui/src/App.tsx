@@ -52,8 +52,9 @@ function App() {
           <div className="max-w-3xl mx-auto">            
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/teams" element={<TeamSelectPage />} />                
               <Route path="/teams/:teamId" element={<TeamLayout />}>
-                <Route index element={<Navigate to="roster" />} />                
+                <Route index element={<Navigate to="roster" />} />
                 <Route path="/teams/:teamId/roster" element={<RosterPage />} />
                 <Route path="/teams/:teamId/games" element={<GamesListPage />} />
                 <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />

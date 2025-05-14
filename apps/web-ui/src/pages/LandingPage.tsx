@@ -14,7 +14,7 @@ function LandingPage() {
             Balance fairness and strategy with just a few clicks.
           </p>
           <Link
-            to="/"
+            to="/teams"
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded text-lg"
           >
             Get Started
@@ -46,7 +46,7 @@ function LandingPage() {
         {/* Screenshot or Preview */}
         <section className="text-center">
           <img
-            src="../public/assets/lineup-preview.png"
+            src="/assets/lineup-preview.png"
             alt="Lineup preview"
             className="mx-auto rounded shadow-md border border-slate-200"
           />
@@ -65,7 +65,7 @@ function LandingPage() {
         {/* CTA */}
         <div className="text-center">
           <Link
-            to="/"
+            to="/teams"
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded text-lg"
           >
             Create Your Team

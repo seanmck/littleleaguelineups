@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Player, Team, Position } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-const POSITIONS: Position[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+const POSITIONS: String[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 
 function RosterPage() {
   const { teamId } = useParams<{ teamId: string }>();
