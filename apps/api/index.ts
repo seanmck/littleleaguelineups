@@ -46,6 +46,8 @@ const generateLineup = (players: Player[]): Lineup => {
 
 // Get all teams
 app.get('/api/teams', async (req: Request, res: Response) => {
+  console.log("Database URL: ", process.env.DATABASE_URL);
+
   try {
     const teams = await prisma.team.findMany({
       include: {
