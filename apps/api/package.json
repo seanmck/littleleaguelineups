@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/index.js",
+    "start": "npx tsx index.js",
     "dev": "nodemon --watch ../../packages/types/src --exec ts-node-esm index.ts",
     "build": "tsc"
   },
@@ -14,19 +14,24 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@lineup/types": "file:../../packages/types",
+    "@azure/identity": "^4.9.1",
+    "@lineup/types": "1.0.0",
     "@prisma/client": "^6.7.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "nanoid": "^5.1.2"
+    "nanoid": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "tsx": "^4.19.4",
+    "prisma": "^6.7.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.18",
     "@types/express": "^4.17.21",
-    "@types/node": "^22.15.17",
+    "@types/node": "^22.15.18",
     "nodemon": "^3.1.10",
     "prisma": "^6.7.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }
