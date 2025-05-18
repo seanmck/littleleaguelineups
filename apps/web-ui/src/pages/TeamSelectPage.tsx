@@ -18,7 +18,11 @@ function TeamSelectPage() {
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;
+    
     try {
+      console.log('Creating team:', newTeamName);
+      console.log('API URL:', `${API_BASE}/teams`);
+
       const res = await fetch(`${API_BASE}/teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
