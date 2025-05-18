@@ -1,6 +1,14 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 
+const { PG_HOST, PG_USER, PG_PASSWORD, PG_DB } = process.env;
+
+if (!PG_HOST || !PG_USER || !PG_PASSWORD || !PG_DB) {
+  throw new Error("Missing required database environment variables");
+}
+
+process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}@${PG_HOST}:5432/${PG_DB}?schema=public`;
+
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
 
