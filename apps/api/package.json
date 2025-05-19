@@ -21,7 +21,6 @@
     "express": "^4.21.2",
     "nanoid": "^5.1.2",
     "node-fetch": "^3.3.2",
-    "tsx": "^4.19.4",
     "prisma": "^6.7.0"
   },
   "devDependencies": {
@@ -32,6 +31,7 @@
     "prisma": "^6.7.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "pg": "^8.16.0"
   }
 }
