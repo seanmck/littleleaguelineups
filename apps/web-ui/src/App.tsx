@@ -56,15 +56,13 @@ function App() {
           <div className="mx-auto">            
           <Navbar />
             <Routes>
+              
               <Route path="/" element={<Dashboard />} />
               <Route path="/teams" element={<TeamSelectPage />} />                
               <Route path="/teams/:teamId/roster" element={<RosterPage />} />
-              
-                <Route index element={<Navigate to="roster" />} />
-              
-                <Route path="/teams/:teamId/games" element={<GamesListPage />} />
-                <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />
-                <Route path="/teams/:teamId/games/:gameId" element={<GameDetailPage />} />
+              <Route path="/teams/:teamId/games" element={<GamesListPage />} />
+              <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />
+              <Route path="/teams/:teamId/games/:gameId" element={<GameDetailPage />} />
               
             </Routes>
 

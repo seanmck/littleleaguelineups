@@ -42,6 +42,8 @@ echo "✅ DATABASE_URL set to: $DATABASE_URL"
 npx prisma generate --schema=apps/api/prisma/schema.prisma
 npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
 
+npm run --prefix packages/types/ build
+
 # Start the API service
 echo "🚀 Starting API service..."
 cd apps/api
