@@ -37,7 +37,7 @@ function GameDetailPage() {
   });
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
+    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6 max-w-7xl mx-auto">
       <h2 className="text-xl font-bold">Lineup for {formattedDate}</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">

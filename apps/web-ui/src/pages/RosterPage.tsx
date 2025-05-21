@@ -54,7 +54,7 @@ function RosterPage() {
   if (!team) return <p>Loading team data...</p>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-7xl mx-auto">
       <h2 className="text-xl font-bold">Roster for {team.name}</h2>
 
       <ul className="space-y-4">

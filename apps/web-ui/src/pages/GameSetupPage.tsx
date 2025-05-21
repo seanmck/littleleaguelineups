@@ -49,7 +49,7 @@ function GameSetupPage() {
   if (!teamId) return <p>Team not found.</p>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
+    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6 mx-auto max-w-7xl">
       <h2 className="text-xl font-bold">Create New Game</h2>
 
       <label className="block">

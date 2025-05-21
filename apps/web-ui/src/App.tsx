@@ -6,6 +6,10 @@ import GameDetailPage from './pages/GameDetailPage';
 import GamesListPage from './pages/GamesListPage';
 import LandingPage from './pages/LandingPage';
 
+import Navbar from './components/Navbar';
+import Dashboard from './pages/Dashboard';
+import Footer from './components/Footer';
+
 import TeamLayout from './layouts/TeamLayout';
 
 function Header() {
@@ -13,8 +17,8 @@ function Header() {
 
   if (!teamId) return null;
 
-  return (
-    <header className="mb-6 text-center">
+  return (    
+    <header className="mb-6 text-center">      
       <h1 className="text-4xl text-blue-800 font-bold tracking-wider">
         Little League Lineup
       </h1>
@@ -46,21 +50,25 @@ function Header() {
 }
 
 function App() {
-  return (
+  return (  
     <Router>
         <main className="min-h-screen bg-gradient-to-br from-white to-sky-100 p-6 font-sans">
-          <div className="max-w-3xl mx-auto">            
+          <div className="mx-auto">            
+          <Navbar />
             <Routes>
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<Dashboard />} />
               <Route path="/teams" element={<TeamSelectPage />} />                
-              <Route path="/teams/:teamId" element={<TeamLayout />}>
+              <Route path="/teams/:teamId/roster" element={<RosterPage />} />
+              
                 <Route index element={<Navigate to="roster" />} />
-                <Route path="/teams/:teamId/roster" element={<RosterPage />} />
+              
                 <Route path="/teams/:teamId/games" element={<GamesListPage />} />
                 <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />
                 <Route path="/teams/:teamId/games/:gameId" element={<GameDetailPage />} />
-              </Route>
+              
             </Routes>
+
+            <Footer />
           </div>
       </main>
     </Router>
