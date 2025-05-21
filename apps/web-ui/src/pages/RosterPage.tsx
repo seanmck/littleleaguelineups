@@ -58,7 +58,10 @@ function RosterPage() {
       <h2 className="text-xl font-bold">Roster for {team.name}</h2>
 
       <ul className="space-y-4">
-        {players.map(player => (
+        {players
+          .slice() // create a shallow copy to avoid mutating state
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(player => (
           <li key={player.id} className="border p-4 rounded bg-white shadow">
             <div className="font-medium mb-2">{player.name}</div>
             <div className="grid grid-cols-2 gap-4">
