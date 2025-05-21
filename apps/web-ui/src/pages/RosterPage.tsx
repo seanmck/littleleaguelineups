@@ -63,18 +63,50 @@ function RosterPage() {
             <div className="font-medium mb-2">{player.name}</div>
             <div className="grid grid-cols-2 gap-4">
               <PreferenceButtons
-                title="Preferred Positions"
-                positions={POSITIONS}
-                selected={player.preferredPositions}
-                color="blue"
-                onClick={pos => togglePreference(player.id, pos, 'preferred')}
+              title="Preferred Positions"
+              positions={POSITIONS}
+              selected={players.find(p => p.id === player.id)?.preferredPositions ?? []}
+              color="blue"
+              onClick={pos => {
+                // Optimistically update UI
+                setPlayers(prev =>
+                prev.map(p =>
+                  p.id === player.id
+                  ? {
+                    ...p,
+                    preferredPositions: p.preferredPositions?.includes(pos)
+                      ? p.preferredPositions.filter(pp => pp !== pos)
+                      : [...(p.preferredPositions ?? []), pos],
+                    }
+                  : p
+                )
+                );
+                // Fire and forget API call
+                togglePreference(player.id, pos, 'preferred');
+              }}
               />
               <PreferenceButtons
-                title="Avoid Positions"
-                positions={POSITIONS}
-                selected={player.avoidPositions}
-                color="red"
-                onClick={pos => togglePreference(player.id, pos, 'avoid')}
+              title="Avoid Positions"
+              positions={POSITIONS}
+              selected={players.find(p => p.id === player.id)?.avoidPositions ?? []}
+              color="red"
+              onClick={pos => {
+                // Optimistically update UI
+                setPlayers(prev =>
+                prev.map(p =>
+                  p.id === player.id
+                  ? {
+                    ...p,
+                    avoidPositions: p.avoidPositions?.includes(pos)
+                      ? p.avoidPositions.filter(ap => ap !== pos)
+                      : [...(p.avoidPositions ?? []), pos],
+                    }
+                  : p
+                )
+                );
+                // Fire and forget API call
+                togglePreference(player.id, pos, 'avoid');
+              }}
               />
             </div>
           </li>
