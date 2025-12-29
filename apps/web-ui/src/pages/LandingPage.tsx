@@ -65,10 +65,10 @@ function LandingPage() {
         {/* CTA */}
         <div className="text-center">
           <Link
-            to="/teams"
+            to="/signup"
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded text-lg"
           >
-            Create Your Team
+            Signup
           </Link>
         </div>
       </div>

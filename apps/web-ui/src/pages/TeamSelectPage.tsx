@@ -24,23 +24,34 @@ function TeamSelectPage() {
       console.log('Creating team:', newTeamName);
       console.log('API URL:', `${API_BASE}/teams`);
 
+      const token = localStorage.getItem('token'); 
+
       const res = await fetch(`${API_BASE}/teams`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ name: newTeamName.trim() })
-      });
+      });     
+      
+      const team = await res.json();
 
-      const created = await res.json();
-      setTeams(prev => [...prev, created]);
-      setNewTeamName('');
-      navigate(`/teams/${created.id}/roster`);
+      if (!team.id) {
+        throw new Error('No team id returned from API');
+      } else {
+        console.log('Team created successfully:', team);
+      }
+      
+      navigate(`/teams/${team.id}/roster`);
+      
     } catch (err) {
       console.error('Error creating team:', err);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-4">
+    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-4 w-2/3 mx-auto">
       <h2 className="text-xl font-bold">Select a Team</h2>
 
       {teams.length > 0 && (

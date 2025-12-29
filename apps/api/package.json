@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "npx tsx index.ts",
+    "dev": "npx tsx src/index.ts",
     "build": "tsc"
   },
   "keywords": [],
@@ -14,10 +14,12 @@
   "description": "",
   "dependencies": {
     "@azure/identity": "^4.9.1",
-    "@lineup/types": "1.0.0",
+    "@lineup/types": "file:../../packages/types",
     "@prisma/client": "^6.7.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.1.2",
     "node-fetch": "^3.3.2",
     "prisma": "^6.7.0"

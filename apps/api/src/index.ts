@@ -1,13 +1,25 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 
+import signupRoutes from './routes/signup.ts';
+import teamRoutes from './routes/teams.js';
+
 const { PG_HOST, PG_USER, PG_PASSWORD, PG_DB } = process.env;
 
-if (!PG_HOST || !PG_USER || !PG_PASSWORD || !PG_DB) {
-  throw new Error("Missing required database environment variables");
-}
+console.log("PG_HOST: ", PG_HOST);
+console.log("PG_USER: ", PG_USER);
+console.log("PG_PASSWORD: ", PG_PASSWORD);
+console.log("PG_DB: ", PG_DB);
+console.log("PG_PORT: ", process.env.PG_PORT);
 
-process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}@${PG_HOST}:5432/${PG_DB}?schema=public`;
+// Only construct DATABASE_URL from parts if not already set (e.g., by .env file)
+if (!process.env.DATABASE_URL) {
+  if (!PG_HOST || !PG_USER || !PG_PASSWORD || !PG_DB) {
+    throw new Error("Missing DATABASE_URL or required PG_* environment variables");
+  }
+  const port = process.env.PG_PORT || '5432';
+  process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}@${PG_HOST}:${port}/${PG_DB}?schema=public`;
+}
 
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
@@ -17,6 +29,9 @@ const prisma = new PrismaClient();
 const app: Application = express();
 app.use(cors());
 app.use(express.json());
+
+app.use('/api', signupRoutes);
+app.use('/api', teamRoutes);
 
 // Fix generateLineup function
 const generateLineup = (players: Player[]): Lineup => {
@@ -70,22 +85,6 @@ app.get('/api/teams', async (req: Request, res: Response) => {
   }
 });
 
-// Create a new team
-app.post('/api/teams', async (req: Request, res: Response) => {
-  const { name } = req.body;
-  try {
-    const team = await prisma.team.create({
-      data: {
-        name,
-      },
-    });
-    res.status(201).json(team);
-  } catch (err) {
-    console.error('Error creating team:', err);
-    res.status(500).json({ error: 'Failed to create team' });
-  }
-});
-
 // Add a player to a team
 app.post('/api/teams/:teamId/players', async (req: Request<{ teamId: string }>, res: Response) => {
   const { teamId } = req.params;
@@ -107,6 +106,9 @@ app.post('/api/teams/:teamId/players', async (req: Request<{ teamId: string }>, 
 // Get all players in a team
 app.get('/api/teams/:teamId/players', async (req: Request<{ teamId: string }>, res: Response) => {
   const { teamId } = req.params;
+
+  console.log('Fetching players for team ID:', teamId);
+
   try {
     const players = await prisma.player.findMany({
       where: { teamId: parseInt(teamId, 10) },

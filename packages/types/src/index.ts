@@ -1,7 +1,29 @@
-export type Position = 'P' | 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF';
+export type Position =
+  | 'P'
+  | 'C'
+  | '1B'
+  | '2B'
+  | '3B'
+  | 'SS'
+  | 'LF'
+  | 'CF'
+  | 'RF'
+  | 'LCF'
+  | 'RCF'
+  | 'Bench';
 
 export const POSITIONS: Position[] = [
-  'P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'
+  'P',
+  'C',
+  '1B',
+  '2B',
+  '3B',
+  'SS',
+  'LF',
+  'CF',
+  'RF',
+  'LCF',
+  'RCF',
 ];
 
 export interface Player {
@@ -28,6 +50,6 @@ export interface Game {
 
 export interface Lineup {
   [inning: number]: {
-    [position: string]: number;
+    [position: string]: number | number[];
   };
 }

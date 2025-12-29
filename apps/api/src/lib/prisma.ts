@@ -3,7 +3,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 
 const DB_MODE = process.env.DB_MODE || "local"; // "local", "local-cloud", "cloud"
 
-let prisma: PrismaClient;
+let prisma: PrismaClient | undefined;
 
 async function createPrismaClient(): Promise<PrismaClient> {
   let url: string;
