@@ -7,11 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id        String           @id @default(uuid())
+  email     String           @unique
+  password  String
+  teams     TeamMembership[] // back-reference
+}
+
 model Team {
-  id      Int      @id @default(autoincrement())
-  name    String
-  games   Game[]
-  players Player[]
+  id        Int              @id @default(autoincrement())
+  name      String
+  members   TeamMembership[] // back-reference
+  games     Game[]
+  players   Player[]
+}
+
+model TeamMembership {
+  id        String   @id @default(uuid())
+  role      TeamRole
+  accountId String
+  teamId    Int
+
+  account   Account  @relation(fields: [accountId], references: [id])
+  team      Team     @relation(fields: [teamId], references: [id])
+
+  @@unique([accountId, teamId])
+}
+
+enum TeamRole {
+  coach
+  parent
 }
 
 model Player {

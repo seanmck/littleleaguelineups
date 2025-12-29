@@ -1,0 +1,32 @@
+name: Deploy API to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+
+jobs:
+  build-and-deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and deploy API container
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          registryUrl: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
+          imageToBuild: ${{ secrets.REGISTRY_LOGIN_SERVER }}/lineup-api:latest
+          dockerfilePath: apps/api/Dockerfile
+          containerAppName: lineup-api
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}

@@ -64,16 +64,16 @@ function GameDetailPage() {
                       // Get the lineup for the current inning
                       const currentInningLineup = inningLineup[inning];
 
-                      if (!currentInningLineup) {
-                        return '-'; // If no lineup exists for the inning, display "-"
-                      }
+                        if (!currentInningLineup) {
+                        return 'Bench'; // If no lineup exists for the inning, display "Bench"
+                        }
 
                       // Find the player's position in the current inning
                       const position = Object.keys(currentInningLineup).find(
                         pos => currentInningLineup[pos] === player.id
                       );
 
-                      return position ? position : '-'; // Display the position or "-"
+                        return position ? position : 'Bench'; // Display the position or "Bench"
                     })()}
                   </td>
                 ))}
