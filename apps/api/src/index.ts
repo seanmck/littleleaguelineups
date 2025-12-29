@@ -12,11 +12,14 @@ console.log("PG_PASSWORD: ", PG_PASSWORD);
 console.log("PG_DB: ", PG_DB);
 console.log("PG_PORT: ", process.env.PG_PORT);
 
-if (!PG_HOST || !PG_USER || !PG_PASSWORD || !PG_DB) {
-  //throw new Error("Missing required database environment variables");
+// Only construct DATABASE_URL from parts if not already set (e.g., by .env file)
+if (!process.env.DATABASE_URL) {
+  if (!PG_HOST || !PG_USER || !PG_PASSWORD || !PG_DB) {
+    throw new Error("Missing DATABASE_URL or required PG_* environment variables");
+  }
+  const port = process.env.PG_PORT || '5432';
+  process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}@${PG_HOST}:${port}/${PG_DB}?schema=public`;
 }
-
-process.env.DATABASE_URL = `postgresql://${encodeURIComponent(PG_USER)}:${encodeURIComponent(PG_PASSWORD)}@${PG_HOST}:5432/${PG_DB}?schema=public`;
 
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';

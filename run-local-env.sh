@@ -12,7 +12,7 @@ set -e
 # Define variables
 PG_CONTAINER_NAME="littleleague-pg"
 PG_IMAGE="postgres:15-alpine"
-export PG_PORT=5432
+PG_PORT_DEFAULT=5432
 export PG_USER="myadmin"
 export PG_PASSWORD="mypassword"
 export PG_DB="appdb"
@@ -23,31 +23,71 @@ if [ "$1" == "--seed" ]; then
   SEED_DATA=true
 fi
 
-# Start PostgreSQL in a Docker container
-echo "🚀 Starting PostgreSQL container..."
-if [ "$(docker ps -a -q -f name=$PG_CONTAINER_NAME)" ]; then
-  echo "🗑 Removing existing PostgreSQL container..."
-  docker rm -f $PG_CONTAINER_NAME > /dev/null
+# Function to start a fresh container
+start_fresh_container() {
+  # Clean up any existing container
+  if [ "$(docker ps -a -q -f name=^${PG_CONTAINER_NAME}$)" ]; then
+    echo "🗑 Removing existing PostgreSQL container..."
+    docker rm -f $PG_CONTAINER_NAME > /dev/null
+  fi
+
+  # Find an available port starting from default
+  find_available_port() {
+    local port=$1
+    while docker ps -q --filter "publish=$port" | grep -q . || lsof -i :$port -t > /dev/null 2>&1; do
+      echo "Port $port is in use, trying next..." >&2
+      port=$((port + 1))
+    done
+    echo $port
+  }
+
+  export PG_PORT=$(find_available_port $PG_PORT_DEFAULT)
+  if [ "$PG_PORT" != "$PG_PORT_DEFAULT" ]; then
+    echo "⚠️  Default port $PG_PORT_DEFAULT unavailable, using port $PG_PORT"
+  fi
+
+  # Start PostgreSQL in a Docker container
+  echo "🚀 Starting PostgreSQL container on port $PG_PORT..."
+  docker run --name $PG_CONTAINER_NAME \
+    -e POSTGRES_USER=$PG_USER \
+    -e POSTGRES_PASSWORD=$PG_PASSWORD \
+    -e POSTGRES_DB=$PG_DB \
+    -p $PG_PORT:5432 \
+    -d $PG_IMAGE
+  echo "✅ PostgreSQL container started."
+
+  # Wait for PostgreSQL to be ready
+  echo "⏳ Waiting for PostgreSQL to be ready..."
+  until docker exec $PG_CONTAINER_NAME pg_isready -U $PG_USER > /dev/null 2>&1; do
+    sleep 1
+  done
+  echo "✅ PostgreSQL is ready."
+}
+
+# Check if our container is already running with correct credentials
+if [ "$(docker ps -q -f name=^${PG_CONTAINER_NAME}$)" ]; then
+  export PG_PORT=$(docker port $PG_CONTAINER_NAME 5432 | cut -d: -f2)
+  # Verify we can authenticate with expected credentials
+  if docker exec $PG_CONTAINER_NAME pg_isready -U $PG_USER > /dev/null 2>&1 && \
+     docker exec -e PGPASSWORD=$PG_PASSWORD $PG_CONTAINER_NAME psql -U $PG_USER -d $PG_DB -c "SELECT 1" > /dev/null 2>&1; then
+    echo "✅ PostgreSQL container already running with valid credentials, reusing it."
+  else
+    echo "⚠️  Container exists but credentials don't match, recreating..."
+    start_fresh_container
+  fi
+else
+  start_fresh_container
 fi
 
-docker run --name $PG_CONTAINER_NAME \
-  -e POSTGRES_USER=$PG_USER \
-  -e POSTGRES_PASSWORD=$PG_PASSWORD \
-  -e POSTGRES_DB=$PG_DB \
-  -p $PG_PORT:5432 \
-  -d $PG_IMAGE
-echo "✅ PostgreSQL container started."
-
-# Wait for PostgreSQL to be ready
-echo "⏳ Waiting for PostgreSQL to be ready..."
-until docker exec $PG_CONTAINER_NAME pg_isready -U $PG_USER > /dev/null 2>&1; do
-  sleep 1
-done
-echo "✅ PostgreSQL is ready."
-
-# Generate the DATABASE_URL environment variable
-export DATABASE_URL="postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}?schema=public"
+# Generate the DATABASE_URL environment variable (sslmode=disable for local Docker)
+export DATABASE_URL="postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}?schema=public&sslmode=disable"
 echo "✅ DATABASE_URL set to: $DATABASE_URL"
+
+# Write .env file for API (overrides any cloud settings)
+cat > apps/api/.env <<EOF
+DATABASE_URL=${DATABASE_URL}
+EOF
+echo "✅ Created apps/api/.env for local development"
 
 npx prisma generate --schema=apps/api/prisma/schema.prisma
 npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
