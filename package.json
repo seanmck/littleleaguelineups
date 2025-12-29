@@ -3,5 +3,12 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "prisma": "^6.8.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

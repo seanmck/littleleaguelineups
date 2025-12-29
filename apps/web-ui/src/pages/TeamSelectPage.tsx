@@ -7,6 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 function TeamSelectPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,18 +44,29 @@ function TeamSelectPage() {
       <h2 className="text-xl font-bold">Select a Team</h2>
 
       {teams.length > 0 && (
-        <ul className="space-y-2">
-          {teams.map(team => (
-            <li key={team.id}>
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                onClick={() => navigate(`/teams/${team.id}/roster`)}
-              >
+        <div className="space-y-2">
+          <select
+            value={selectedTeamId || ''}
+            onChange={e => setSelectedTeamId(e.target.value)}
+            className="border p-2 rounded w-full"
+          >
+            <option value="" disabled>
+              Select a team
+            </option>
+            {teams.map(team => (
+              <option key={team.id} value={team.id}>
                 {team.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => selectedTeamId && navigate(`/teams/${selectedTeamId}/roster`)}
+            disabled={!selectedTeamId}
+            className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Go
+          </button>
+        </div>
       )}
 
       <div className="pt-4 border-t border-slate-300">
@@ -65,7 +77,7 @@ function TeamSelectPage() {
           onChange={e => setNewTeamName(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter') {
-              handleCreateTeam(); // Trigger the button action
+              handleCreateTeam();
             }
           }}
           placeholder="Team name"

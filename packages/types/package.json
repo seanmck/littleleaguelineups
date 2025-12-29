@@ -1,0 +1,17 @@
+{
+  "name": "@lineup/types",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "tsx": "^4.19.4"
+  }
+}
