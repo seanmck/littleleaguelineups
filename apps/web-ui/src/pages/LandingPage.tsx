@@ -63,12 +63,18 @@ function LandingPage() {
         </section>
 
         {/* CTA */}
-        <div className="text-center">
+        <div className="text-center space-x-4">
           <Link
             to="/signup"
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded text-lg"
           >
-            Signup
+            Sign Up
+          </Link>
+          <Link
+            to="/login"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded text-lg"
+          >
+            Log In
           </Link>
         </div>
       </div>

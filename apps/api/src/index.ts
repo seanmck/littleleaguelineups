@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 
-import signupRoutes from './routes/signup.ts';
+import signupRoutes from './routes/signup.js';
 import teamRoutes from './routes/teams.js';
 
 const { PG_HOST, PG_USER, PG_PASSWORD, PG_DB } = process.env;
@@ -23,6 +23,7 @@ if (!process.env.DATABASE_URL) {
 
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
+import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
 
 const prisma = new PrismaClient();
 
@@ -205,6 +206,22 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
   }
 });
 
+// Get all games for a team
+app.get('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, res: Response) => {
+  const { teamId } = req.params;
+  try {
+    const games = await prisma.game.findMany({
+      where: { teamId: parseInt(teamId, 10) },
+      include: { players: true },
+      orderBy: { date: 'desc' },
+    });
+    res.json(games);
+  } catch (err) {
+    console.error('Error fetching games:', err);
+    res.status(500).json({ error: 'Failed to fetch games' });
+  }
+});
+
 // Get a specific game by ID
 app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   
@@ -225,6 +242,73 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
   } catch (err) {
     console.error('Error fetching game:', err);
     res.status(500).json({ error: 'Failed to fetch game' });
+  }
+});
+
+// Update a game (opponent, scores, lineup, players)
+app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
+  const { gameId } = req.params;
+  const { opponent, homeScore, awayScore, lineup, playerIds } = req.body;
+
+  try {
+    const updateData: {
+      opponent?: string | null;
+      homeScore?: number | null;
+      awayScore?: number | null;
+      lineup?: string;
+      players?: { set: { id: number }[] };
+    } = {};
+
+    // Only include fields that are provided
+    if (opponent !== undefined) updateData.opponent = opponent;
+    if (homeScore !== undefined) updateData.homeScore = homeScore;
+    if (awayScore !== undefined) updateData.awayScore = awayScore;
+    if (lineup !== undefined) updateData.lineup = JSON.stringify(lineup);
+
+    // Handle player updates if provided
+    if (playerIds !== undefined) {
+      updateData.players = {
+        set: playerIds.map((id: string) => ({ id: parseInt(id, 10) })),
+      };
+    }
+
+    const game = await prisma.game.update({
+      where: { id: parseInt(gameId, 10) },
+      data: updateData,
+      include: { players: true },
+    });
+
+    res.json(game);
+  } catch (err) {
+    console.error('Error updating game:', err);
+    res.status(500).json({ error: 'Failed to update game' });
+  }
+});
+
+// Get season recap stats for a team
+app.get('/api/teams/:teamId/season-recap', async (req: Request<{ teamId: string }>, res: Response) => {
+  const { teamId } = req.params;
+  try {
+    const team = await prisma.team.findUnique({
+      where: { id: parseInt(teamId, 10) },
+      include: {
+        games: {
+          include: { players: true },
+          orderBy: { date: 'asc' },
+        },
+        players: true,
+      },
+    });
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    const stats = calculateSeasonRecapStats(team);
+    res.json(stats);
+  } catch (err) {
+    console.error('Error fetching season recap:', err);
+    res.status(500).json({ error: 'Failed to fetch season recap' });
   }
 });
 

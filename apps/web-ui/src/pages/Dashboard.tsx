@@ -50,27 +50,34 @@ export default function Dashboard() {
 
   return (    
     <main className="max-w-6xl mx-auto px-6 py-10 space-y-10">
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card
           image="/assets/LittleLeagueCoach.png"
           title="Player Roster"
           description="Manage your team's roster"
           buttonLabel="View Roster"
-          linkTo="/teams/1/roster"
+          linkTo={`/teams/${teams[0]?.id}/roster`}
         />
         <Card
           image="/assets/LittleLeagueScoresheet.png"
           title="Lineup Strategy"
           description="Set your team's lineup for games."
           buttonLabel="Set Lineup"
-          linkTo="/teams/1/roster"
+          linkTo={`/teams/${teams[0]?.id}/games/setup`}
+        />
+        <Card
+          image="/assets/GameSchedule.png"
+          title="Schedule"
+          description="View your team's schedule and lineups from this season"
+          buttonLabel="View Schedule"
+          linkTo={`/teams/${teams[0]?.id}/games`}
         />
         <Card
           image="/assets/SeasonRecap.png"
           title="Season Recap"
           description="See who has been where so far."
-          buttonLabel="Set Recap"
-          linkTo="/teams/1/roster"
+          buttonLabel="View Recap"
+          linkTo={`/teams/${teams[0]?.id}/season-recap`}
         />
       </section>
 

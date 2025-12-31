@@ -4,8 +4,10 @@ import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import GamesListPage from './pages/GamesListPage';
+import SeasonRecapPage from './pages/SeasonRecapPage';
 import LandingPage from './pages/LandingPage';
 import SignupPage from './pages/Signup';
+import LoginPage from './pages/Login';
 
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
@@ -60,11 +62,13 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/teams" element={<TeamSelectPage />} />
               <Route path="/teams/:teamId/roster" element={<RosterPage />} />
               <Route path="/teams/:teamId/games" element={<GamesListPage />} />
               <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />
               <Route path="/teams/:teamId/games/:gameId" element={<GameDetailPage />} />
+              <Route path="/teams/:teamId/season-recap" element={<SeasonRecapPage />} />
             </Routes>
           <Footer />
           </div>

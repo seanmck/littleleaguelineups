@@ -50,10 +50,13 @@ model Player {
 }
 
 model Game {
-  id      Int      @id @default(autoincrement())
-  date    DateTime
-  teamId  Int
-  team    Team     @relation(fields: [teamId], references: [id])
-  lineup  Json?
-  players Player[] @relation("GamePlayers")
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  teamId    Int
+  team      Team     @relation(fields: [teamId], references: [id])
+  lineup    Json?
+  players   Player[] @relation("GamePlayers")
+  opponent  String?
+  homeScore Int?
+  awayScore Int?
 }

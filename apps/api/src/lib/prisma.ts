@@ -6,6 +6,11 @@ const DB_MODE = process.env.DB_MODE || "local"; // "local", "local-cloud", "clou
 let prisma: PrismaClient | undefined;
 
 async function createPrismaClient(): Promise<PrismaClient> {
+  // If DATABASE_URL is set (e.g., from .env file), use it directly
+  if (process.env.DATABASE_URL) {
+    return new PrismaClient();
+  }
+
   let url: string;
 
   switch (DB_MODE) {

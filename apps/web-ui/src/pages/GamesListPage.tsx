@@ -1,84 +1,114 @@
-import { Link } from 'react-router-dom';
-import { useStore } from '../state/store';
-import { generateLineup } from '../lib/lineupGenerator';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Game, calculateGameResult } from '@lineup/types';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function GamesListPage() {
-  const selectedTeamId = useStore(state => state.selectedTeamId);
-  const teams = useStore(state => state.teams);
-  const updateTeam = useStore(state => state.updateTeam);
+  const { teamId } = useParams<{ teamId: string }>();
+  const navigate = useNavigate();
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const team = teams.find(t => t.id === selectedTeamId);
-  if (!team) return <p>No team selected.</p>;
+  useEffect(() => {
+    if (!teamId) return;
 
-  const now = new Date();
-  const games = [...team.games].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+    fetch(`${API_BASE}/teams/${teamId}/games`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch games');
+        return res.json();
+      })
+      .then(data => {
+        setGames(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading games:', err);
+        setError('Failed to load games');
+        setLoading(false);
+      });
+  }, [teamId]);
 
-  const upcomingGames = games.filter(g => new Date(g.date) >= now);
-  const pastGames = games.filter(g => new Date(g.date) < now);
-
-  const handleGenerateLineup = (gameId: string) => {
-    const game = team.games.find(g => g.id === gameId);
-    if (!game) return;
-    const players = team.players.filter(p => game.playerIds.includes(p.id));
-    const lineup = generateLineup(players, 4);
-    const updatedGames = team.games.map(g =>
-      g.id === gameId ? { ...g, lineup } : g
-    );
-    updateTeam({ ...team, games: updatedGames });
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const renderGameList = (gameList: typeof games) => (
-    <ul className="divide-y divide-slate-200">
-      {gameList.map(game => (
-        <li key={game.id} className="py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-semibold text-slate-800">{game.date}</p>
-              <p className="text-sm text-slate-500">
-                {game.lineup ? 'Lineup ready' : 'No lineup yet'}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {game.lineup ? (
-                <Link
-                  to={`/games/${game.id}`}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                >
-                  View Lineup
-                </Link>
-              ) : (
-                <button
-                  onClick={() => handleGenerateLineup(game.id)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                >
-                  Generate Lineup
-                </button>
-              )}
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
+  const formatResult = (game: Game): string => {
+    const result = calculateGameResult(game.homeScore, game.awayScore);
+    if (!result) return '-';
+    return `${result} ${game.homeScore}-${game.awayScore}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
+        <p className="text-gray-500">Loading games...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-8">
-      <h2 className="text-3xl font-bold text-blue-800">Games Schedule</h2>
+    <div className="bg-white p-6 rounded-lg shadow space-y-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold text-blue-800">Game Schedule</h2>
+        <div className="flex gap-3">
+          <Link
+            to={`/teams/${teamId}/season-recap`}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
+          >
+            Season Recap
+          </Link>
+          <Link
+            to={`/teams/${teamId}/games/setup`}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          >
+            + New Game
+          </Link>
+        </div>
+      </div>
 
-      {upcomingGames.length > 0 && (
-        <section>
-          <h3 className="text-xl font-semibold text-slate-700 mb-2">Upcoming Games</h3>
-          {renderGameList(upcomingGames)}
-        </section>
-      )}
-
-      {pastGames.length > 0 && (
-        <section className="pt-6 border-t border-slate-300">
-          <h3 className="text-xl font-semibold text-slate-700 mb-2">Past Games</h3>
-          {renderGameList(pastGames)}
-        </section>
+      {games.length === 0 ? (
+        <p className="text-gray-500">No games scheduled yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="p-3 text-left border-b font-semibold text-slate-700">Date</th>
+                <th className="p-3 text-left border-b font-semibold text-slate-700">Opponent</th>
+                <th className="p-3 text-center border-b font-semibold text-slate-700">Players</th>
+                <th className="p-3 text-center border-b font-semibold text-slate-700">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {games.map(game => (
+                <tr
+                  key={game.id}
+                  onClick={() => navigate(`/teams/${teamId}/games/${game.id}`)}
+                  className="hover:bg-blue-50 cursor-pointer border-b transition-colors"
+                >
+                  <td className="p-3 text-slate-800">{formatDate(game.date)}</td>
+                  <td className="p-3 text-slate-600">{game.opponent || '-'}</td>
+                  <td className="p-3 text-center text-slate-600">{game.players?.length || 0}</td>
+                  <td className="p-3 text-center text-slate-600">{formatResult(game)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
