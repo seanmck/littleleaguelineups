@@ -29,12 +29,22 @@ router.get('/my-teams', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/teams', requireAuth, async (req, res) => {  
+router.post('/teams', requireAuth, async (req, res) => {
   console.log('Creating team with body:', req.body);
-  
+
   const prisma = await getPrisma();
   const accountId = (req as any).accountId;
   const { name } = req.body;
+
+  console.log('AccountId from token:', accountId);
+
+  // Verify account exists
+  const account = await prisma.account.findUnique({ where: { id: accountId } });
+  console.log('Account lookup result:', account);
+
+  if (!account) {
+    return res.status(401).json({ message: 'Account not found - please sign up again' });
+  }
 
   if (!name) {
     return res.status(400).json({ message: 'Team name is required' });

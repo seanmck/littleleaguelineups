@@ -35,3 +35,6 @@ Thumbs.db
 
 # === Coverage (if using test tools) ===
 **/coverage/
+
+# === Specs ===
+.specs/

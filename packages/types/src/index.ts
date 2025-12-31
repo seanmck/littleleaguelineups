@@ -46,6 +46,20 @@ export interface Game {
   players: Player[];
   lineup: Record<number, Record<string, string>>;
   notifiedAt?: string;
+  opponent?: string;
+  homeScore?: number;
+  awayScore?: number;
+}
+
+export type GameResult = 'W' | 'L' | 'T' | null;
+
+export function calculateGameResult(homeScore?: number, awayScore?: number): GameResult {
+  if (homeScore === undefined || homeScore === null || awayScore === undefined || awayScore === null) {
+    return null;
+  }
+  if (homeScore > awayScore) return 'W';
+  if (homeScore < awayScore) return 'L';
+  return 'T';
 }
 
 export interface Lineup {
