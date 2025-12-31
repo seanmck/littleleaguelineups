@@ -23,6 +23,7 @@ if (!process.env.DATABASE_URL) {
 
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
+import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
 
 const prisma = new PrismaClient();
 
@@ -281,6 +282,33 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
   } catch (err) {
     console.error('Error updating game:', err);
     res.status(500).json({ error: 'Failed to update game' });
+  }
+});
+
+// Get season recap stats for a team
+app.get('/api/teams/:teamId/season-recap', async (req: Request<{ teamId: string }>, res: Response) => {
+  const { teamId } = req.params;
+  try {
+    const team = await prisma.team.findUnique({
+      where: { id: parseInt(teamId, 10) },
+      include: {
+        games: {
+          include: { players: true },
+          orderBy: { date: 'asc' },
+        },
+        players: true,
+      },
+    });
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    const stats = calculateSeasonRecapStats(team);
+    res.json(stats);
+  } catch (err) {
+    console.error('Error fetching season recap:', err);
+    res.status(500).json({ error: 'Failed to fetch season recap' });
   }
 });
 

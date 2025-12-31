@@ -77,7 +77,7 @@ export default function Dashboard() {
           title="Season Recap"
           description="See who has been where so far."
           buttonLabel="View Recap"
-          linkTo={`/teams/${teams[0]?.id}/roster`}
+          linkTo={`/teams/${teams[0]?.id}/season-recap`}
         />
       </section>
 

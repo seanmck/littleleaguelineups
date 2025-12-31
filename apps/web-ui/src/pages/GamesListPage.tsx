@@ -64,12 +64,20 @@ function GamesListPage() {
     <div className="bg-white p-6 rounded-lg shadow space-y-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-blue-800">Game Schedule</h2>
-        <Link
-          to={`/teams/${teamId}/games/setup`}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-        >
-          + New Game
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            to={`/teams/${teamId}/season-recap`}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
+          >
+            Season Recap
+          </Link>
+          <Link
+            to={`/teams/${teamId}/games/setup`}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          >
+            + New Game
+          </Link>
+        </div>
       </div>
 
       {games.length === 0 ? (

@@ -4,6 +4,7 @@ import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import GamesListPage from './pages/GamesListPage';
+import SeasonRecapPage from './pages/SeasonRecapPage';
 import LandingPage from './pages/LandingPage';
 import SignupPage from './pages/Signup';
 import LoginPage from './pages/Login';
@@ -67,6 +68,7 @@ function App() {
               <Route path="/teams/:teamId/games" element={<GamesListPage />} />
               <Route path="/teams/:teamId/games/setup" element={<GameSetupPage />} />
               <Route path="/teams/:teamId/games/:gameId" element={<GameDetailPage />} />
+              <Route path="/teams/:teamId/season-recap" element={<SeasonRecapPage />} />
             </Routes>
           <Footer />
           </div>
