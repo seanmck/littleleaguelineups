@@ -49,6 +49,7 @@ export interface Game {
   opponent?: string;
   homeScore?: number;
   awayScore?: number;
+  innings?: number;
 }
 
 export type GameResult = 'W' | 'L' | 'T' | null;

@@ -18,7 +18,7 @@ import TeamLayout from './layouts/TeamLayout';
 function App() {
   return (
     <Router>
-      <main className="min-h-screen bg-gradient-to-br from-white to-sky-100 font-sans">
+      <main className="min-h-screen bg-gradient-to-br from-white to-green-50">
         <div className="mx-auto">
           <Navbar />
           <Routes>

@@ -26,18 +26,18 @@ function TeamLayout() {
   if (!team) return <LoadingState message="Loading team..." />;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `px-3 py-2 rounded text-sm font-medium transition-colors ${
+    `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
       isActive
-        ? 'bg-blue-700 text-white'
-        : 'text-blue-100 hover:bg-blue-700/50 hover:text-white'
+        ? 'bg-green-700 text-white shadow-sm'
+        : 'text-green-200 hover:bg-green-700/50 hover:text-white'
     }`;
 
   return (
     <div>
-      <div className="bg-blue-900/80">
-        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-4">
-          <span className="text-blue-300 text-xs uppercase tracking-wider">{team.name}</span>
-          <span className="text-blue-700">|</span>
+      <div className="bg-green-800 border-t border-green-700/50">
+        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-4 overflow-x-auto">
+          <span className="text-green-300 text-xs uppercase tracking-wider font-semibold shrink-0">{team.name}</span>
+          <span className="text-green-600">|</span>
           <nav className="flex gap-1">
             <NavLink to={`/teams/${teamId}/roster`} className={linkClass}>Roster</NavLink>
             <NavLink to={`/teams/${teamId}/games/setup`} className={linkClass}>Game Setup</NavLink>
@@ -47,7 +47,9 @@ function TeamLayout() {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <Outlet />
+        <div className="page-enter">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

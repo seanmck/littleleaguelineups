@@ -1,15 +1,24 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Game, Player, calculateGameResult } from '@lineup/types';
-import { LoadingState, ErrorBanner, Button } from '../components/ui';
+import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
-function getPositionColor(position: string): string {
-  if (position === 'P') return 'bg-red-100';
-  if (position === 'C') return 'bg-blue-100';
-  if (['1B', '2B', '3B', 'SS'].includes(position)) return 'bg-green-100';
-  if (['LF', 'CF', 'RF', 'LCF', 'RCF'].includes(position)) return 'bg-yellow-100';
-  return 'bg-slate-100'; // Bench
+function getPositionBadge(position: string): { bg: string; text: string } {
+  if (position === 'P') return { bg: 'bg-red-100', text: 'text-red-800' };
+  if (position === 'C') return { bg: 'bg-blue-100', text: 'text-blue-800' };
+  if (['1B', '2B', '3B', 'SS'].includes(position)) return { bg: 'bg-green-100', text: 'text-green-800' };
+  if (['LF', 'CF', 'RF', 'LCF', 'RCF'].includes(position)) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+  return { bg: 'bg-slate-100', text: 'text-slate-600' }; // Bench
+}
+
+function PositionBadge({ position }: { position: string }) {
+  const { bg, text } = getPositionBadge(position);
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${bg} ${text}`}>
+      {position}
+    </span>
+  );
 }
 
 function GameDetailPage() {
@@ -107,80 +116,87 @@ function GameDetailPage() {
     : null;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
+    <div className="space-y-6">
+      {/* Print-only header (hidden on screen) */}
+      <div className="print-only hidden">
+        <h1 style={{ fontSize: '18pt', fontWeight: 'bold', marginBottom: '4px' }}>
+          Lineup — {formattedDate}
+        </h1>
+        {game.opponent && (
+          <p style={{ fontSize: '12pt', marginBottom: '8px' }}>vs. {game.opponent}</p>
+        )}
+        <hr style={{ marginBottom: '12px' }} />
+      </div>
+
       {/* Header with back link */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start no-print">
         <div>
           <Link
             to={`/teams/${teamId}/games`}
-            className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+            className="text-green-700 hover:text-green-900 text-sm font-semibold mb-2 inline-block transition-colors"
           >
             &larr; Back to Schedule
           </Link>
-          <h2 className="text-2xl font-bold text-slate-800">{formattedDate}</h2>
+          <h2 className="text-3xl font-display text-green-900">{formattedDate}</h2>
         </div>
-        {!isEditing && (
-          <Button variant="primary" onClick={() => setIsEditing(true)}>
-            Edit Game
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {!isEditing && game.lineup && (
+            <Button variant="muted" onClick={() => window.print()}>
+              Print Lineup
+            </Button>
+          )}
+          {!isEditing && (
+            <Button variant="primary" onClick={() => setIsEditing(true)}>
+              Edit Game
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Game Info Section */}
-      <div className="bg-slate-50 p-4 rounded-lg space-y-4">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4 no-print">
         {isEditing ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Opponent
-                </label>
-                <input
-                  type="text"
-                  value={editForm.opponent}
-                  onChange={e => setEditForm({ ...editForm, opponent: e.target.value })}
-                  placeholder="Enter opponent name"
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Our Score
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.homeScore}
-                  onChange={e => setEditForm({ ...editForm, homeScore: e.target.value })}
-                  placeholder="0"
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Opponent Score
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.awayScore}
-                  onChange={e => setEditForm({ ...editForm, awayScore: e.target.value })}
-                  placeholder="0"
-                  className="w-full border border-slate-300 rounded px-3 py-2"
-                />
-              </div>
+              <Input
+                label="Opponent"
+                type="text"
+                value={editForm.opponent}
+                onChange={e => setEditForm({ ...editForm, opponent: e.target.value })}
+                placeholder="Enter opponent name"
+              />
+              <Input
+                label="Our Score"
+                type="number"
+                min={0}
+                value={editForm.homeScore}
+                onChange={e => setEditForm({ ...editForm, homeScore: e.target.value })}
+                placeholder="0"
+              />
+              <Input
+                label="Opponent Score"
+                type="number"
+                min={0}
+                value={editForm.awayScore}
+                onChange={e => setEditForm({ ...editForm, awayScore: e.target.value })}
+                placeholder="0"
+              />
             </div>
 
             {/* Player Attendance */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Players in Attendance
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {allPlayers.map(player => (
                   <label
                     key={player.id}
-                    className="flex items-center gap-2 p-2 bg-white rounded border cursor-pointer hover:bg-blue-50"
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      selectedPlayerIds.includes(player.id.toString())
+                        ? 'bg-green-50 border-green-300'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
                   >
                     <input
                       type="checkbox"
@@ -188,7 +204,7 @@ function GameDetailPage() {
                       onChange={() => handlePlayerToggle(player.id.toString())}
                       className="rounded"
                     />
-                    <span className="text-sm">{player.name}</span>
+                    <span className="text-sm font-medium">{player.name}</span>
                   </label>
                 ))}
               </div>
@@ -218,69 +234,72 @@ function GameDetailPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <span className="text-sm text-slate-500">Opponent</span>
-              <p className="font-medium text-slate-800">{game.opponent || 'Not set'}</p>
+              <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Opponent</span>
+              <p className="font-semibold text-slate-800 mt-0.5">{game.opponent || 'Not set'}</p>
             </div>
             <div>
-              <span className="text-sm text-slate-500">Result</span>
-              <p className="font-medium text-slate-800">{resultDisplay || 'Not played yet'}</p>
+              <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Result</span>
+              <p className="font-semibold text-slate-800 mt-0.5">{resultDisplay || 'Not played yet'}</p>
             </div>
             <div>
-              <span className="text-sm text-slate-500">Players</span>
-              <p className="font-medium text-slate-800">{game.players.length} in attendance</p>
+              <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Players</span>
+              <p className="font-semibold text-slate-800 mt-0.5">{game.players.length} in attendance</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Lineup Table */}
-      {game.lineup && (
-        <div>
-          <h3 className="text-xl font-semibold text-slate-800 mb-3">Lineup</h3>
+      {game.lineup && (() => {
+        const parsedLineup = typeof game.lineup === 'string' ? JSON.parse(game.lineup) : game.lineup;
+        const inningsCount = game.innings ?? Object.keys(parsedLineup).length ?? 4;
+        const inningsArray = Array.from({ length: inningsCount }, (_, i) => i);
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-100">
-                  <th className="p-2 border-b font-semibold text-slate-700">Player</th>
-                  {[1, 2, 3, 4].map(inning => (
-                    <th key={inning} className="p-2 border-b text-center font-semibold text-slate-700">
-                      Inning {inning}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {game.players.map(player => (
-                  <tr key={player.id} className="hover:bg-slate-50">
-                    <td className="p-2 border-b font-medium text-slate-800">{player.name}</td>
-                    {[0, 1, 2, 3].map(inning => {
-                      const inningLineup = typeof game.lineup === 'string'
-                        ? JSON.parse(game.lineup)
-                        : game.lineup;
-                      const currentInningLineup = inningLineup[inning];
-                      const position = currentInningLineup
-                        ? Object.keys(currentInningLineup).find(
-                            pos => currentInningLineup[pos] === player.id
-                          ) || 'Bench'
-                        : 'Bench';
+        return (
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
+            <h3 className="text-2xl font-display text-green-900 mb-4 no-print">Lineup</h3>
 
-                      return (
-                        <td
-                          key={`${player.id}-${inning}`}
-                          className="p-2 border-b text-center text-slate-600"
-                        >
-                          {position}
-                        </td>
-                      );
-                    })}
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="p-3 border-b font-semibold text-slate-700">Player</th>
+                    {inningsArray.map(i => (
+                      <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
+                        Inning {i + 1}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {game.players.map(player => (
+                    <tr key={player.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3 border-b font-semibold text-slate-800">{player.name}</td>
+                      {inningsArray.map(inning => {
+                        const currentInningLineup = parsedLineup[inning];
+                        const position = currentInningLineup
+                          ? Object.keys(currentInningLineup).find(
+                              pos => currentInningLineup[pos] === player.id
+                            ) || 'Bench'
+                          : 'Bench';
+
+                        return (
+                          <td
+                            key={`${player.id}-${inning}`}
+                            className="p-3 border-b text-center"
+                          >
+                            <PositionBadge position={position} />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

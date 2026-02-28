@@ -59,4 +59,5 @@ model Game {
   opponent  String?
   homeScore Int?
   awayScore Int?
+  innings   Int      @default(4)
 }
