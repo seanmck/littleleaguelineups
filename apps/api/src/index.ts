@@ -158,6 +158,20 @@ app.put('/api/teams/:teamId/players/:playerId', async (req: Request<{ teamId: st
   }
 });
 
+// Delete a player from a team
+app.delete('/api/teams/:teamId/players/:playerId', async (req: Request<{ teamId: string; playerId: string }>, res: Response) => {
+  const { playerId } = req.params;
+  try {
+    await prisma.player.delete({
+      where: { id: parseInt(playerId, 10) },
+    });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error deleting player:', err);
+    res.status(500).json({ error: 'Failed to delete player' });
+  }
+});
+
 // Create a new game for a team
 app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, res: Response) => {
   const { teamId } = req.params;

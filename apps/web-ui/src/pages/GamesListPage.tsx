@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Game, calculateGameResult } from '@lineup/types';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+import { LoadingState, ErrorBanner, EmptyState, ButtonLink } from '../components/ui';
+import { apiFetch } from '../lib/api';
 
 function GamesListPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -14,7 +14,7 @@ function GamesListPage() {
   useEffect(() => {
     if (!teamId) return;
 
-    fetch(`${API_BASE}/teams/${teamId}/games`)
+    apiFetch(`/teams/${teamId}/games`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch games');
         return res.json();
@@ -23,8 +23,7 @@ function GamesListPage() {
         setGames(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Error loading games:', err);
+      .catch(() => {
         setError('Failed to load games');
         setLoading(false);
       });
@@ -44,44 +43,30 @@ function GamesListPage() {
     return `${result} ${game.homeScore}-${game.awayScore}`;
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
-        <p className="text-gray-500">Loading games...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
-        <p className="text-red-500">{error}</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message="Loading games..." />;
+  if (error) return <ErrorBanner message={error} />;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-6 max-w-7xl mx-auto">
+    <div className="bg-white p-6 rounded-lg shadow space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-blue-800">Game Schedule</h2>
         <div className="flex gap-3">
-          <Link
-            to={`/teams/${teamId}/season-recap`}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
-          >
+          <ButtonLink variant="primary" to={`/teams/${teamId}/season-recap`}>
             Season Recap
-          </Link>
-          <Link
-            to={`/teams/${teamId}/games/setup`}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
+          </ButtonLink>
+          <ButtonLink variant="positive" to={`/teams/${teamId}/games/setup`}>
             + New Game
-          </Link>
+          </ButtonLink>
         </div>
       </div>
 
       {games.length === 0 ? (
-        <p className="text-gray-500">No games scheduled yet.</p>
+        <EmptyState
+          icon="&#128197;"
+          message="No games scheduled yet."
+          actionLabel="Create First Game"
+          actionTo={`/teams/${teamId}/games/setup`}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">

@@ -11,8 +11,8 @@ import {
   Legend,
 } from 'recharts';
 import type { SeasonRecapStats, PlayerSeasonStats } from '@lineup/types';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+import { LoadingState, ErrorBanner } from '../components/ui';
+import { apiFetch } from '../lib/api';
 
 function SeasonRecapPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -25,7 +25,7 @@ function SeasonRecapPage() {
   useEffect(() => {
     if (!teamId) return;
 
-    fetch(`${API_BASE}/teams/${teamId}/season-recap`)
+    apiFetch(`/teams/${teamId}/season-recap`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch season recap');
         return res.json();
@@ -34,8 +34,7 @@ function SeasonRecapPage() {
         setStats(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Error loading season recap:', err);
+      .catch(() => {
         setError('Failed to load season recap');
         setLoading(false);
       });
@@ -67,29 +66,9 @@ function SeasonRecapPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
-        <p className="text-gray-500">Loading season recap...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
-        <p className="text-red-500">{error}</p>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow max-w-7xl mx-auto">
-        <p className="text-gray-500">No data available.</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message="Loading season recap..." />;
+  if (error) return <ErrorBanner message={error} />;
+  if (!stats) return <ErrorBanner message="No data available." />;
 
   const { seasonSummary, fairnessMetrics, playerStats } = stats;
 
@@ -127,7 +106,7 @@ function SeasonRecapPage() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-8 max-w-7xl mx-auto">
+    <div className="bg-white p-6 rounded-lg shadow space-y-8">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

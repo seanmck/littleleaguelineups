@@ -1,11 +1,7 @@
-// components/Footer.tsx
-import React from 'react';
-
 export default function Footer() {
   return (
-    <footer className="text-center text-sm text-gray-600 py-6 border-t mt-10">
-      <a href="#" className="hover:underline mx-2">Privacy Policy</a>
-      <a href="#" className="hover:underline mx-2">Terms of Service</a>
+    <footer className="text-center text-xs text-slate-400 py-8 mt-12">
+      <p>&copy; {new Date().getFullYear()} Little League Coach</p>
     </footer>
   );
 }

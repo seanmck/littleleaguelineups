@@ -1,26 +1,43 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Player, Team, Position } from '../types';
+import { LoadingState, ErrorBanner, EmptyState, Button } from '../components/ui';
+import { apiFetch } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-const POSITIONS: String[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+const POSITIONS: Position[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 
 function RosterPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const [team, setTeam] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   useEffect(() => {
     if (!teamId) return;
 
-    fetch(`${API_BASE}/teams/${teamId}`).then(res => res.json()).then(setTeam);
-    fetch(`${API_BASE}/teams/${teamId}/players`).then(res => res.json()).then(setPlayers);
+    apiFetch(`/teams/${teamId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load team');
+        return res.json();
+      })
+      .then(setTeam)
+      .catch(() => setError('Failed to load team data'));
+
+    apiFetch(`/teams/${teamId}/players`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load players');
+        return res.json();
+      })
+      .then(setPlayers)
+      .catch(() => setError('Failed to load players'));
   }, [teamId]);
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim() || !teamId) return;
-    const res = await fetch(`${API_BASE}/teams/${teamId}/players`, {
+    const res = await apiFetch(`/teams/${teamId}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newPlayerName.trim() }),
@@ -28,6 +45,28 @@ function RosterPage() {
     const created = await res.json();
     setPlayers(p => [...p, created]);
     setNewPlayerName('');
+  };
+
+  const handleRename = async (playerId: string) => {
+    if (!editingName.trim() || !teamId) return;
+    const res = await apiFetch(`/teams/${teamId}/players/${playerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editingName.trim() }),
+    });
+    const updated = await res.json();
+    setPlayers(prev => prev.map(p => (p.id === playerId ? updated : p)));
+    setEditingId(null);
+  };
+
+  const handleDelete = async (playerId: string, playerName: string) => {
+    if (!teamId || !confirm(`Remove ${playerName} from the roster?`)) return;
+    const res = await apiFetch(`/teams/${teamId}/players/${playerId}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      setPlayers(prev => prev.filter(p => p.id !== playerId));
+    }
   };
 
   const togglePreference = async (
@@ -43,7 +82,7 @@ function RosterPage() {
       ? current.filter(p => p !== pos)
       : [...current, pos];
     const updatedPlayer = { ...player, [key]: updated };
-    await fetch(`${API_BASE}/teams/${teamId}/players/${playerId}`, {
+    await apiFetch(`/teams/${teamId}/players/${playerId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedPlayer),
@@ -51,88 +90,137 @@ function RosterPage() {
     setPlayers(prev => prev.map(p => (p.id === playerId ? updatedPlayer : p)));
   };
 
-  if (!team) return <p>Loading team data...</p>;
+  if (error) return <ErrorBanner message={error} />;
+  if (!team) return <LoadingState message="Loading team data..." />;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
+    <div className="space-y-4">
       <h2 className="text-xl font-bold">Roster for {team.name}</h2>
 
-      <ul className="space-y-4">
-        {players
-          .slice() // create a shallow copy to avoid mutating state
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map(player => (
-          <li key={player.id} className="border p-4 rounded bg-white shadow">
-            <div className="font-medium mb-2">{player.name}</div>
-            <div className="grid grid-cols-2 gap-4">
-              <PreferenceButtons
-              title="Preferred Positions"
-              positions={POSITIONS}
-              selected={players.find(p => p.id === player.id)?.preferredPositions ?? []}
-              color="blue"
-              onClick={pos => {
-                // Optimistically update UI
-                setPlayers(prev =>
-                prev.map(p =>
-                  p.id === player.id
-                  ? {
-                    ...p,
-                    preferredPositions: p.preferredPositions?.includes(pos)
-                      ? p.preferredPositions.filter(pp => pp !== pos)
-                      : [...(p.preferredPositions ?? []), pos],
-                    }
-                  : p
-                )
-                );
-                // Fire and forget API call
-                togglePreference(player.id, pos, 'preferred');
-              }}
-              />
-              <PreferenceButtons
-              title="Avoid Positions"
-              positions={POSITIONS}
-              selected={players.find(p => p.id === player.id)?.avoidPositions ?? []}
-              color="red"
-              onClick={pos => {
-                // Optimistically update UI
-                setPlayers(prev =>
-                prev.map(p =>
-                  p.id === player.id
-                  ? {
-                    ...p,
-                    avoidPositions: p.avoidPositions?.includes(pos)
-                      ? p.avoidPositions.filter(ap => ap !== pos)
-                      : [...(p.avoidPositions ?? []), pos],
-                    }
-                  : p
-                )
-                );
-                // Fire and forget API call
-                togglePreference(player.id, pos, 'avoid');
-              }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+      {players.length === 0 ? (
+        <EmptyState icon="&#9918;" message="No players yet. Add your first player below." />
+      ) : (
+        <ul className="space-y-4">
+          {players
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(player => (
+            <li key={player.id} className="border border-slate-100 p-4 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                {editingId === player.id ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleRename(player.id);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      className="border border-slate-300 rounded px-2 py-1 text-sm flex-1"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleRename(player.id)}
+                      className="text-green-600 hover:text-green-700 text-sm font-medium"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-slate-400 hover:text-slate-600 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-semibold text-slate-800">{player.name}</div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setEditingId(player.id);
+                          setEditingName(player.name);
+                        }}
+                        className="text-slate-400 hover:text-blue-600 text-xs"
+                        title="Rename"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(player.id, player.name)}
+                        className="text-slate-400 hover:text-red-600 text-xs"
+                        title="Remove from roster"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <PreferenceButtons
+                  title="Preferred Positions"
+                  positions={POSITIONS}
+                  selected={players.find(p => p.id === player.id)?.preferredPositions ?? []}
+                  color="blue"
+                  onClick={pos => {
+                    setPlayers(prev =>
+                      prev.map(p =>
+                        p.id === player.id
+                          ? {
+                              ...p,
+                              preferredPositions: p.preferredPositions?.includes(pos)
+                                ? p.preferredPositions.filter(pp => pp !== pos)
+                                : [...(p.preferredPositions ?? []), pos],
+                            }
+                          : p
+                      )
+                    );
+                    togglePreference(player.id, pos, 'preferred');
+                  }}
+                />
+                <PreferenceButtons
+                  title="Avoid Positions"
+                  positions={POSITIONS}
+                  selected={players.find(p => p.id === player.id)?.avoidPositions ?? []}
+                  color="red"
+                  onClick={pos => {
+                    setPlayers(prev =>
+                      prev.map(p =>
+                        p.id === player.id
+                          ? {
+                              ...p,
+                              avoidPositions: p.avoidPositions?.includes(pos)
+                                ? p.avoidPositions.filter(ap => ap !== pos)
+                                : [...(p.avoidPositions ?? []), pos],
+                            }
+                          : p
+                      )
+                    );
+                    togglePreference(player.id, pos, 'avoid');
+                  }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="flex gap-2">
         <input
           value={newPlayerName}
           onChange={e => setNewPlayerName(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter') {
-              handleAddPlayer(); // Trigger the button action
+              handleAddPlayer();
             }
           }}
           className="border p-2 rounded w-full"
           placeholder="Player name"
         />
-        <button
-          onClick={handleAddPlayer}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-        >
+        <Button variant="positive" onClick={handleAddPlayer}>
           Add Player
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -151,8 +239,6 @@ function PreferenceButtons({
   color: string;
   onClick: (pos: Position) => void;
 }) {
-  console.log({ title, positions, selected, color });
-  console.log({ selected });
   return (
     <div>
       <div className="text-sm font-semibold mb-1">{title}</div>
