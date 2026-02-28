@@ -1,8 +1,16 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Game, Player, calculateGameResult } from '@lineup/types';
+import { LoadingState, ErrorBanner, Button } from '../components/ui';
+import { apiFetch } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+function getPositionColor(position: string): string {
+  if (position === 'P') return 'bg-red-100';
+  if (position === 'C') return 'bg-blue-100';
+  if (['1B', '2B', '3B', 'SS'].includes(position)) return 'bg-green-100';
+  if (['LF', 'CF', 'RF', 'LCF', 'RCF'].includes(position)) return 'bg-yellow-100';
+  return 'bg-slate-100'; // Bench
+}
 
 function GameDetailPage() {
   const { gameId, teamId } = useParams();
@@ -10,6 +18,7 @@ function GameDetailPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     opponent: '',
     homeScore: '',
@@ -20,8 +29,7 @@ function GameDetailPage() {
   useEffect(() => {
     if (!teamId || !gameId) return;
 
-    // Fetch game details
-    fetch(`${API_BASE}/teams/${teamId}/games/${gameId}`)
+    apiFetch(`/teams/${teamId}/games/${gameId}`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch game details');
         return res.json();
@@ -35,13 +43,12 @@ function GameDetailPage() {
         });
         setSelectedPlayerIds(data.players.map((p: Player) => p.id.toString()));
       })
-      .catch(err => console.error('Error fetching game details:', err));
+      .catch(() => setError('Failed to load game details'));
 
-    // Fetch all players for attendance editing
-    fetch(`${API_BASE}/teams/${teamId}/players`)
+    apiFetch(`/teams/${teamId}/players`)
       .then(res => res.json())
       .then(setAllPlayers)
-      .catch(err => console.error('Error fetching players:', err));
+      .catch(() => {});
   }, [teamId, gameId]);
 
   const handleSave = async () => {
@@ -56,7 +63,7 @@ function GameDetailPage() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/teams/${teamId}/games/${gameId}`, {
+      const res = await apiFetch(`/teams/${teamId}/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -67,10 +74,10 @@ function GameDetailPage() {
         setGame(updated);
         setIsEditing(false);
       } else {
-        console.error('Failed to update game');
+        setError('Failed to update game');
       }
-    } catch (err) {
-      console.error('Error updating game:', err);
+    } catch {
+      setError('Failed to update game');
     } finally {
       setIsSaving(false);
     }
@@ -84,7 +91,8 @@ function GameDetailPage() {
     );
   };
 
-  if (!game) return <p className="p-6">Loading game details...</p>;
+  if (error) return <ErrorBanner message={error} />;
+  if (!game) return <LoadingState message="Loading game details..." />;
 
   const formattedDate = new Date(game.date).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -99,7 +107,7 @@ function GameDetailPage() {
     : null;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6 max-w-7xl mx-auto">
+    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-6">
       {/* Header with back link */}
       <div className="flex justify-between items-start">
         <div>
@@ -107,17 +115,14 @@ function GameDetailPage() {
             to={`/teams/${teamId}/games`}
             className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
           >
-            ← Back to Schedule
+            &larr; Back to Schedule
           </Link>
           <h2 className="text-2xl font-bold text-slate-800">{formattedDate}</h2>
         </div>
         {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
+          <Button variant="primary" onClick={() => setIsEditing(true)}>
             Edit Game
-          </button>
+          </Button>
         )}
       </div>
 
@@ -191,17 +196,13 @@ function GameDetailPage() {
 
             {/* Save/Cancel buttons */}
             <div className="flex gap-2 pt-2">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded"
-              >
+              <Button variant="positive" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="muted"
                 onClick={() => {
                   setIsEditing(false);
-                  // Reset form to current game values
                   setEditForm({
                     opponent: game.opponent || '',
                     homeScore: game.homeScore?.toString() || '',
@@ -209,10 +210,9 @@ function GameDetailPage() {
                   });
                   setSelectedPlayerIds(game.players.map(p => p.id.toString()));
                 }}
-                className="bg-slate-300 hover:bg-slate-400 text-slate-800 px-4 py-2 rounded"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -237,6 +237,7 @@ function GameDetailPage() {
       {game.lineup && (
         <div>
           <h3 className="text-xl font-semibold text-slate-800 mb-3">Lineup</h3>
+
           <div className="overflow-x-auto">
             <table className="min-w-full text-left border-collapse">
               <thead>
@@ -253,24 +254,26 @@ function GameDetailPage() {
                 {game.players.map(player => (
                   <tr key={player.id} className="hover:bg-slate-50">
                     <td className="p-2 border-b font-medium text-slate-800">{player.name}</td>
-                    {[0, 1, 2, 3].map(inning => (
-                      <td key={`${player.id}-${inning}`} className="p-2 border-b text-center text-slate-600">
-                        {(() => {
-                          const inningLineup = typeof game.lineup === 'string'
-                            ? JSON.parse(game.lineup)
-                            : game.lineup;
-
-                          const currentInningLineup = inningLineup[inning];
-                          if (!currentInningLineup) return 'Bench';
-
-                          const position = Object.keys(currentInningLineup).find(
+                    {[0, 1, 2, 3].map(inning => {
+                      const inningLineup = typeof game.lineup === 'string'
+                        ? JSON.parse(game.lineup)
+                        : game.lineup;
+                      const currentInningLineup = inningLineup[inning];
+                      const position = currentInningLineup
+                        ? Object.keys(currentInningLineup).find(
                             pos => currentInningLineup[pos] === player.id
-                          );
+                          ) || 'Bench'
+                        : 'Bench';
 
-                          return position || 'Bench';
-                        })()}
-                      </td>
-                    ))}
+                      return (
+                        <td
+                          key={`${player.id}-${inning}`}
+                          className="p-2 border-b text-center text-slate-600"
+                        >
+                          {position}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
