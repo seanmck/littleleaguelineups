@@ -24,6 +24,7 @@ if (!process.env.DATABASE_URL) {
 import { PrismaClient } from '@prisma/client';
 import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
 import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
+import { generateLineup } from './lib/generateLineup.js';
 
 const prisma = new PrismaClient();
 
@@ -33,40 +34,6 @@ app.use(express.json());
 
 app.use('/api', signupRoutes);
 app.use('/api', teamRoutes);
-
-// Fix generateLineup function
-const generateLineup = (players: Player[]): Lineup => {
-  const shuffleArray = (array: Player[]): Player[] => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  };
-
-  const playerPositionHistory: Record<number, string[]> = players.reduce((acc: Record<number, string[]>, player: Player) => {
-    acc[player.id] = [];
-    return acc;
-  }, {});
-
-  const lineup: Lineup = {};
-
-  for (let inning = 0; inning < 9; inning++) {
-    lineup[inning] = {};
-    const shuffledPlayers = shuffleArray([...players]); // Shuffle players for each inning
-    shuffledPlayers.forEach((player: Player, index: number) => {
-      if (index < POSITIONS.length) {
-        const position = POSITIONS[index];
-        lineup[inning][position] = player.id;
-        playerPositionHistory[player.id].push(position);
-      }
-    });
-  }
-
-  console.log('Generated lineup:', lineup);
-
-  return lineup;
-};
 
 // Get all teams
 app.get('/api/teams', async (req: Request, res: Response) => {
@@ -175,7 +142,7 @@ app.delete('/api/teams/:teamId/players/:playerId', async (req: Request<{ teamId:
 // Create a new game for a team
 app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, res: Response) => {
   const { teamId } = req.params;
-  const { date, playerIds } = req.body;
+  const { date, playerIds, innings } = req.body;
 
   try {
     // Fetch players from the database
@@ -193,8 +160,11 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
 
     const parsedDate = new Date(date); // Parses YYYY-MM-DD into UTC midnight
 
+    // Validate innings (1-9, default 4)
+    const inningsCount = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));
+
     // Generate the lineup
-    const lineup = generateLineup(players);
+    const lineup = generateLineup(players, inningsCount);
 
     // Serialize the lineup to a JSON string
     const lineupJson = JSON.stringify(lineup);
@@ -204,6 +174,7 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
       data: {
         date: parsedDate,
         teamId: parseInt(teamId, 10),
+        innings: inningsCount,
         lineup: lineupJson, // Store the lineup as a JSON string
         players: {
           connect: players.map((player) => ({ id: player.id })),
@@ -262,7 +233,7 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
 // Update a game (opponent, scores, lineup, players)
 app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   const { gameId } = req.params;
-  const { opponent, homeScore, awayScore, lineup, playerIds } = req.body;
+  const { opponent, homeScore, awayScore, lineup, playerIds, innings } = req.body;
 
   try {
     const updateData: {
@@ -270,6 +241,7 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
       homeScore?: number | null;
       awayScore?: number | null;
       lineup?: string;
+      innings?: number;
       players?: { set: { id: number }[] };
     } = {};
 
@@ -278,6 +250,9 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     if (homeScore !== undefined) updateData.homeScore = homeScore;
     if (awayScore !== undefined) updateData.awayScore = awayScore;
     if (lineup !== undefined) updateData.lineup = JSON.stringify(lineup);
+    if (innings !== undefined) {
+      updateData.innings = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));
+    }
 
     // Handle player updates if provided
     if (playerIds !== undefined) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Card from '../components/Card';
-import { LoadingState, EmptyState, ButtonLink } from '../components/ui';
+import { LoadingState, EmptyState, ButtonLink, StatCard, Select } from '../components/ui';
 import { Team, Game, Player } from '@lineup/types';
 import { apiFetch } from '../lib/api';
 
@@ -75,23 +75,23 @@ export default function Dashboard() {
   const team = teams.find(t => t.id === selectedTeamId) ?? teams[0];
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <main className="max-w-7xl mx-auto px-6 py-10 space-y-8 page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">{team.name}</h1>
+          <h1 className="text-4xl font-display text-green-900">{team.name}</h1>
           {teams.length > 1 && (
-            <select
+            <Select
               value={team.id}
               onChange={e => setSelectedTeamId(e.target.value)}
-              className="mt-1 text-sm text-slate-500 bg-transparent border-none p-0 cursor-pointer hover:text-slate-700 focus:outline-none"
+              className="mt-2 max-w-xs"
             >
               {teams.map(t => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </div>
         <ButtonLink variant="muted" to="/teams">
@@ -101,7 +101,7 @@ export default function Dashboard() {
 
       {/* Stats row */}
       {stats && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 stagger-children">
           <StatCard label="Players" value={stats.playerCount} />
           <StatCard label="Games" value={stats.gameCount} />
           <StatCard
@@ -112,7 +112,7 @@ export default function Dashboard() {
       )}
 
       {/* Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
         <Card
           image="/assets/LittleLeagueCoach.png"
           title="Player Roster"
@@ -143,14 +143,5 @@ export default function Dashboard() {
         />
       </section>
     </main>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 text-center">
-      <div className="text-2xl font-bold text-blue-800">{value}</div>
-      <div className="text-xs text-slate-500 mt-1 uppercase tracking-wide">{label}</div>
-    </div>
   );
 }

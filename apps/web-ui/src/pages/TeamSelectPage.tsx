@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Team } from '../types';
-import { LoadingState, ErrorBanner, Button } from '../components/ui';
+import { LoadingState, ErrorBanner, Button, Input, Select } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
 function TeamSelectPage() {
@@ -59,53 +59,49 @@ function TeamSelectPage() {
   if (loading) return <LoadingState message="Loading teams..." />;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 space-y-4 w-2/3 mx-auto mt-10">
-      <h2 className="text-xl font-bold">Select a Team</h2>
+    <div className="max-w-lg mx-auto mt-12 space-y-6 px-6 page-enter">
+      <h2 className="text-3xl font-display text-green-900 text-center">Your Teams</h2>
       {error && <ErrorBanner message={error} />}
 
       {teams.length > 0 && (
-        <div className="space-y-2">
-          <select
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4">
+          <Select
+            label="Select a Team"
             value={selectedTeamId || ''}
             onChange={e => setSelectedTeamId(e.target.value)}
-            className="border p-2 rounded w-full"
           >
             <option value="" disabled>
-              Select a team
+              Choose a team...
             </option>
             {teams.map(team => (
               <option key={team.id} value={team.id}>
                 {team.name}
               </option>
             ))}
-          </select>
+          </Select>
           <Button
             variant="primary"
             onClick={() => selectedTeamId && navigate(`/teams/${selectedTeamId}/roster`)}
             disabled={!selectedTeamId}
-            className="mt-2"
           >
-            Go
+            Go to Team
           </Button>
         </div>
       )}
 
-      <div className="pt-4 border-t border-slate-300">
-        <h3 className="font-semibold mb-2">Create New Team</h3>
-        <input
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4">
+        <h3 className="font-display text-xl text-slate-800">Create New Team</h3>
+        <Input
           type="text"
           value={newTeamName}
           onChange={e => setNewTeamName(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter') {
-              handleCreateTeam();
-            }
+            if (e.key === 'Enter') handleCreateTeam();
           }}
           placeholder="Team name"
-          className="border p-2 rounded w-full"
         />
-        <Button variant="positive" onClick={handleCreateTeam} className="mt-2">
-          Add Team
+        <Button variant="positive" onClick={handleCreateTeam}>
+          Create Team
         </Button>
       </div>
     </div>

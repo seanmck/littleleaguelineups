@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Player, Team, Position } from '../types';
-import { LoadingState, ErrorBanner, EmptyState, Button } from '../components/ui';
+import { LoadingState, ErrorBanner, EmptyState, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
 const POSITIONS: Position[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
@@ -14,6 +14,8 @@ function RosterPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     if (!teamId) return;
@@ -45,6 +47,8 @@ function RosterPage() {
     const created = await res.json();
     setPlayers(p => [...p, created]);
     setNewPlayerName('');
+    setFlashId(created.id);
+    setTimeout(() => setFlashId(null), 1000);
   };
 
   const handleRename = async (playerId: string) => {
@@ -94,19 +98,46 @@ function RosterPage() {
   if (!team) return <LoadingState message="Loading team data..." />;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">Roster for {team.name}</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-display text-green-900">Roster</h2>
+        <span className="text-sm text-slate-400 font-semibold">{players.length} players</span>
+      </div>
+
+      {/* Add Player — prominent at top */}
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+        <div className="flex gap-3">
+          <Input
+            value={newPlayerName}
+            onChange={e => setNewPlayerName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAddPlayer();
+            }}
+            placeholder="Add a new player..."
+            className="flex-1"
+          />
+          <Button variant="positive" onClick={handleAddPlayer} className="shrink-0">
+            + Add Player
+          </Button>
+        </div>
+      </div>
 
       {players.length === 0 ? (
-        <EmptyState icon="&#9918;" message="No players yet. Add your first player below." />
+        <EmptyState icon="&#9918;" message="No players yet. Add your first player above." />
       ) : (
-        <ul className="space-y-4">
+        <ul ref={listRef} className="space-y-3">
           {players
             .slice()
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(player => (
-            <li key={player.id} className="border border-slate-100 p-4 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
+            <li
+              key={player.id}
+              className={`rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                flashId === player.id ? 'animate-highlight-flash' : ''
+              }`}
+            >
+              {/* Player header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-50">
                 {editingId === player.id ? (
                   <div className="flex items-center gap-2 flex-1">
                     <input
@@ -116,18 +147,18 @@ function RosterPage() {
                         if (e.key === 'Enter') handleRename(player.id);
                         if (e.key === 'Escape') setEditingId(null);
                       }}
-                      className="border border-slate-300 rounded px-2 py-1 text-sm flex-1"
+                      className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                       autoFocus
                     />
                     <button
                       onClick={() => handleRename(player.id)}
-                      className="text-green-600 hover:text-green-700 text-sm font-medium"
+                      className="text-green-600 hover:text-green-700 text-sm font-semibold transition-colors"
                     >
                       Save
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
-                      className="text-slate-400 hover:text-slate-600 text-sm"
+                      className="text-slate-400 hover:text-slate-600 text-sm transition-colors"
                     >
                       Cancel
                     </button>
@@ -141,14 +172,14 @@ function RosterPage() {
                           setEditingId(player.id);
                           setEditingName(player.name);
                         }}
-                        className="text-slate-400 hover:text-blue-600 text-xs"
+                        className="text-slate-400 hover:text-green-700 text-xs font-semibold transition-colors"
                         title="Rename"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(player.id, player.name)}
-                        className="text-slate-400 hover:text-red-600 text-xs"
+                        className="text-slate-400 hover:text-red-600 text-xs font-semibold transition-colors"
                         title="Remove from roster"
                       >
                         Remove
@@ -157,12 +188,14 @@ function RosterPage() {
                   </>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Position preferences */}
+              <div className="px-5 py-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <PreferenceButtons
-                  title="Preferred Positions"
+                  title="Preferred"
                   positions={POSITIONS}
                   selected={players.find(p => p.id === player.id)?.preferredPositions ?? []}
-                  color="blue"
+                  color="green"
                   onClick={pos => {
                     setPlayers(prev =>
                       prev.map(p =>
@@ -180,10 +213,10 @@ function RosterPage() {
                   }}
                 />
                 <PreferenceButtons
-                  title="Avoid Positions"
+                  title="Avoid"
                   positions={POSITIONS}
                   selected={players.find(p => p.id === player.id)?.avoidPositions ?? []}
-                  color="red"
+                  color="amber"
                   onClick={pos => {
                     setPlayers(prev =>
                       prev.map(p =>
@@ -205,26 +238,20 @@ function RosterPage() {
           ))}
         </ul>
       )}
-
-      <div className="flex gap-2">
-        <input
-          value={newPlayerName}
-          onChange={e => setNewPlayerName(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              handleAddPlayer();
-            }
-          }}
-          className="border p-2 rounded w-full"
-          placeholder="Player name"
-        />
-        <Button variant="positive" onClick={handleAddPlayer}>
-          Add Player
-        </Button>
-      </div>
     </div>
   );
 }
+
+const colorStyles = {
+  green: {
+    active: 'bg-green-100 text-green-700 border-green-600 shadow-sm',
+    inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300',
+  },
+  amber: {
+    active: 'bg-amber-100 text-amber-700 border-amber-500 shadow-sm',
+    inactive: 'bg-white text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300',
+  },
+} as const;
 
 function PreferenceButtons({
   title,
@@ -236,21 +263,20 @@ function PreferenceButtons({
   title: string;
   positions: Position[];
   selected?: Position[];
-  color: string;
+  color: keyof typeof colorStyles;
   onClick: (pos: Position) => void;
 }) {
+  const styles = colorStyles[color];
   return (
     <div>
-      <div className="text-sm font-semibold mb-1">{title}</div>
-      <div className="flex flex-wrap gap-2">
+      <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{title}</div>
+      <div className="flex flex-wrap gap-1.5">
         {positions.map(pos => (
           <button
             key={pos}
             onClick={() => onClick(pos)}
-            className={`text-xs px-3 py-1 border rounded transition-colors duration-200 ${
-              selected.includes(pos)
-                ? `bg-${color}-600 text-white border-${color}-600`
-                : `bg-white text-${color}-600 border-${color}-600 hover:bg-${color}-100`
+            className={`text-xs px-2.5 py-1 border rounded-lg font-semibold transition-all duration-150 ${
+              selected.includes(pos) ? styles.active : styles.inactive
             }`}
           >
             {pos}

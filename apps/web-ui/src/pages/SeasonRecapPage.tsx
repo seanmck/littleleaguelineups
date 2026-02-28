@@ -11,7 +11,7 @@ import {
   Legend,
 } from 'recharts';
 import type { SeasonRecapStats, PlayerSeasonStats } from '@lineup/types';
-import { LoadingState, ErrorBanner } from '../components/ui';
+import { LoadingState, ErrorBanner, StatCard } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
 function SeasonRecapPage() {
@@ -99,23 +99,24 @@ function SeasonRecapPage() {
       Bench: p.benchInnings,
     }));
 
+  const fairnessScore = fairnessMetrics.playingTimeDistribution.fairnessScore;
   const getFairnessColor = (score: number) => {
-    if (score >= 80) return 'bg-green-600';
-    if (score >= 50) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (score >= 80) return 'from-green-500 to-green-600';
+    if (score >= 50) return 'from-yellow-400 to-yellow-500';
+    return 'from-red-400 to-red-500';
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-blue-800">Season Recap</h2>
-          <p className="text-slate-600">{stats.teamName}</p>
+          <h2 className="text-3xl font-display text-green-900">Season Recap</h2>
+          <p className="text-slate-500 text-sm">{stats.teamName}</p>
         </div>
         <Link
           to={`/teams/${teamId}/games`}
-          className="text-blue-600 hover:text-blue-800"
+          className="text-green-700 hover:text-green-900 text-sm font-semibold transition-colors"
         >
           &larr; Back to Games
         </Link>
@@ -123,11 +124,11 @@ function SeasonRecapPage() {
 
       {/* Empty State */}
       {seasonSummary.totalGames === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-xl text-gray-500 mb-4">No games played yet this season.</p>
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-100 shadow-sm">
+          <p className="text-xl text-slate-400 mb-4">No games played yet this season.</p>
           <Link
             to={`/teams/${teamId}/games/setup`}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg"
+            className="inline-block bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-all hover:shadow-md"
           >
             Create Your First Game
           </Link>
@@ -135,7 +136,7 @@ function SeasonRecapPage() {
       ) : (
         <>
           {/* Season Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-children">
             <StatCard label="Games Played" value={seasonSummary.totalGames} />
             <StatCard
               label="Record"
@@ -148,14 +149,14 @@ function SeasonRecapPage() {
           {/* Fairness Score */}
           <div className="flex justify-center">
             <div
-              className={`p-8 rounded-xl ${getFairnessColor(
-                fairnessMetrics.playingTimeDistribution.fairnessScore
-              )} text-white text-center shadow-lg`}
+              className={`p-8 rounded-2xl bg-gradient-to-br ${getFairnessColor(
+                fairnessScore
+              )} text-white text-center shadow-lg animate-scale-in`}
             >
-              <div className="text-5xl font-bold">
-                {fairnessMetrics.playingTimeDistribution.fairnessScore}
+              <div className="text-6xl font-display">
+                {fairnessScore}
               </div>
-              <div className="text-lg mt-2">Playing Time Fairness Score</div>
+              <div className="text-lg font-semibold mt-2">Playing Time Fairness Score</div>
               <div className="text-sm opacity-80 mt-1">
                 Higher is more equitable (0-100)
               </div>
@@ -165,19 +166,19 @@ function SeasonRecapPage() {
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Pitching Distribution */}
-            <div className="border rounded-lg p-4">
-              <h3 className="text-xl font-semibold text-slate-700 mb-4">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+              <h3 className="text-xl font-display text-green-900 mb-4">
                 Pitching Distribution
               </h3>
               {pitchingData.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No pitching data available</p>
+                <p className="text-slate-400 text-center py-8">No pitching data available</p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={pitchingData} layout="vertical">
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="name" width={100} />
                     <Tooltip />
-                    <Bar dataKey="innings" fill="#3b82f6" name="Innings Pitched" />
+                    <Bar dataKey="innings" fill="#15803d" name="Innings Pitched" radius={[0, 4, 4, 0]} />
                     <ReferenceLine
                       x={fairnessMetrics.pitchingDistribution.average}
                       stroke="#ef4444"
@@ -190,19 +191,19 @@ function SeasonRecapPage() {
             </div>
 
             {/* Bench Time */}
-            <div className="border rounded-lg p-4">
-              <h3 className="text-xl font-semibold text-slate-700 mb-4">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+              <h3 className="text-xl font-display text-green-900 mb-4">
                 Bench Time Distribution
               </h3>
               {benchData.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No bench data available</p>
+                <p className="text-slate-400 text-center py-8">No bench data available</p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={benchData} layout="vertical">
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="name" width={100} />
                     <Tooltip />
-                    <Bar dataKey="benchInnings" fill="#f59e0b" name="Bench Innings" />
+                    <Bar dataKey="benchInnings" fill="#f59e0b" name="Bench Innings" radius={[0, 4, 4, 0]} />
                     <ReferenceLine
                       x={fairnessMetrics.benchTimeEquity.average}
                       stroke="#10b981"
@@ -216,44 +217,51 @@ function SeasonRecapPage() {
           </div>
 
           {/* Position Distribution Stacked Bar */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-xl font-semibold text-slate-700 mb-4">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+            <h3 className="text-xl font-display text-green-900 mb-4">
               Position Distribution by Player
             </h3>
             {positionData.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No position data available</p>
+              <p className="text-slate-400 text-center py-8">No position data available</p>
             ) : (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={positionData}>
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                  <YAxis label={{ value: 'Innings', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="P" stackId="a" fill="#ef4444" name="Pitcher" />
-                  <Bar dataKey="C" stackId="a" fill="#3b82f6" name="Catcher" />
-                  <Bar dataKey="IF" stackId="a" fill="#10b981" name="Infield" />
-                  <Bar dataKey="OF" stackId="a" fill="#f59e0b" name="Outfield" />
-                  <Bar dataKey="Bench" stackId="a" fill="#6b7280" name="Bench" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="min-w-0 overflow-x-auto">
+                <div style={{ minWidth: Math.max(positionData.length * 60, 400) }}>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={positionData}>
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                      <YAxis label={{ value: 'Innings', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="P" stackId="a" fill="#ef4444" name="Pitcher" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="C" stackId="a" fill="#15803d" name="Catcher" />
+                      <Bar dataKey="IF" stackId="a" fill="#10b981" name="Infield" />
+                      <Bar dataKey="OF" stackId="a" fill="#f59e0b" name="Outfield" />
+                      <Bar dataKey="Bench" stackId="a" fill="#6b7280" name="Bench" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             )}
           </div>
 
           {/* Detailed Stats Table */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-xl font-semibold text-slate-700 mb-4">
-              Detailed Player Stats
-            </h3>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <h3 className="text-xl font-display text-green-900">
+                Detailed Player Stats
+              </h3>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead>
-                  <tr className="bg-slate-100">
+                  <tr className="bg-slate-50">
                     <SortableHeader
                       label="Player"
                       field="playerName"
                       currentField={sortField}
                       direction={sortDirection}
                       onClick={handleSort}
+                      align="left"
                     />
                     <SortableHeader
                       label="Games"
@@ -310,9 +318,9 @@ function SeasonRecapPage() {
                   {getSortedPlayers().map(player => (
                     <tr
                       key={player.playerId}
-                      className="hover:bg-blue-50 border-b transition-colors"
+                      className="hover:bg-green-50 border-b border-slate-50 transition-colors"
                     >
-                      <td className="p-3 font-medium text-slate-800">
+                      <td className="p-3 font-semibold text-slate-800">
                         {player.playerName}
                       </td>
                       <td className="p-3 text-center text-slate-600">
@@ -348,39 +356,30 @@ function SeasonRecapPage() {
   );
 }
 
-// Simple stat card component
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-slate-50 border rounded-lg p-4 text-center">
-      <div className="text-2xl font-bold text-blue-800">{value}</div>
-      <div className="text-sm text-slate-600">{label}</div>
-    </div>
-  );
-}
-
-// Sortable table header component
 function SortableHeader({
   label,
   field,
   currentField,
   direction,
   onClick,
+  align = 'center',
 }: {
   label: string;
   field: keyof PlayerSeasonStats;
   currentField: keyof PlayerSeasonStats;
   direction: 'asc' | 'desc';
   onClick: (field: keyof PlayerSeasonStats) => void;
+  align?: 'left' | 'center';
 }) {
   const isActive = currentField === field;
   return (
     <th
-      className="p-3 text-center border-b font-semibold text-slate-700 cursor-pointer hover:bg-slate-200"
+      className={`p-3 ${align === 'left' ? 'text-left' : 'text-center'} border-b font-semibold text-slate-500 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100 transition-colors select-none`}
       onClick={() => onClick(field)}
     >
       {label}
       {isActive && (
-        <span className="ml-1">{direction === 'asc' ? '▲' : '▼'}</span>
+        <span className="ml-1 text-green-700">{direction === 'asc' ? '▲' : '▼'}</span>
       )}
     </th>
   );

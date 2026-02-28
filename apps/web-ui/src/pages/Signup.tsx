@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Button, Input, ErrorBanner } from '../components/ui';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -31,7 +32,7 @@ export default function SignupPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem('token', data.token); // or set a cookie
+      localStorage.setItem('token', data.token);
       navigate('/dashboard');
     } catch (err) {
       setError('Network error');
@@ -39,44 +40,41 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow-lg">
-      <h1 className="text-2xl font-bold mb-4 text-center">Create an Account</h1>
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
+    <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-lg animate-scale-in">
+      <h1 className="text-3xl font-display text-green-900 mb-6 text-center">Create an Account</h1>
+      {error && <ErrorBanner message={error} />}
+      <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <Input
           type="email"
-          placeholder="Email"
-          className="w-full p-2 border rounded"
+          label="Email"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <input
+        <Input
           type="password"
-          placeholder="Password"
-          className="w-full p-2 border rounded"
+          label="Password"
+          placeholder="Choose a password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <input
+        <Input
           type="password"
-          placeholder="Confirm Password"
-          className="w-full p-2 border rounded"
+          label="Confirm Password"
+          placeholder="Confirm your password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-        >
+        <Button type="submit" className="w-full">
           Sign Up
-        </button>
+        </Button>
       </form>
-      <p className="mt-4 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <Link to="/login" className="text-blue-600 hover:underline">
+        <Link to="/login" className="text-green-700 font-semibold hover:text-green-800 transition-colors">
           Log in
         </Link>
       </p>

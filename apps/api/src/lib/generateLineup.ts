@@ -1,6 +1,6 @@
 import { Player, POSITIONS, Position } from '@lineup/types';
 
-export function generateLineup(players: Player[]): Lineup {
+export function generateLineup(players: Player[], innings: number = 4): Lineup {
   const shuffleArray = (array: Player[]): Player[] => {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -16,7 +16,7 @@ export function generateLineup(players: Player[]): Lineup {
 
   const lineup: Lineup = {};
 
-  for (let inning = 0; inning < 9; inning++) {
+  for (let inning = 0; inning < innings; inning++) {
     lineup[inning] = {};
     const shuffled = shuffleArray([...players]);
     let positions: Position[];
