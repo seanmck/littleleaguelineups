@@ -10,8 +10,8 @@ COPY package.json package-lock.json ./
 COPY apps ./apps
 COPY packages ./packages
 
-# Install dependencies
-RUN npm install --workspaces
+# Install all dependencies (including devDependencies needed for build)
+RUN npm install --include=dev
 
 # Build shared types
 RUN npm run --workspace @lineup/types build
