@@ -30,4 +30,4 @@ COPY --from=builder /app/packages/types ./packages/types
 
 EXPOSE 3000
 
-CMD ["npx", "tsx", "apps/api/src/index.ts"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma && npx tsx apps/api/src/index.ts"]
