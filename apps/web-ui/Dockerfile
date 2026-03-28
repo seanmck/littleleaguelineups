@@ -19,14 +19,14 @@ RUN npm run --workspace @lineup/types build
 # Build web-ui
 RUN npm run --workspace littleleaguelineups build
 
-# Stage 2: Serve with nginx
-FROM nginx:alpine
+# Stage 2: Serve with Node.js
+FROM node:20-alpine
 
-COPY --from=builder /app/apps/web-ui/dist /usr/share/nginx/html
-COPY apps/web-ui/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY apps/web-ui/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+WORKDIR /app
 
-EXPOSE 80
+COPY --from=builder /app/apps/web-ui/dist ./dist
+COPY apps/web-ui/server.js ./server.js
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+EXPOSE 8080
+
+CMD ["node", "server.js"]
