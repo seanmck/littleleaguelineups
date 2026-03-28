@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Little League Lineups is a full-stack TypeScript application for managing youth baseball team rosters and automatically generating fair game lineups. It uses a monorepo structure with npm workspaces.
+Fair Ball is a full-stack TypeScript application for managing youth baseball team rosters and automatically generating fair game lineups. It uses a monorepo structure with npm workspaces.
 
 ## Development Commands
 

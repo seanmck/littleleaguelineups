@@ -1,4 +1,4 @@
-# Little League Lineups
+# Fair Ball
 
 A full-stack TypeScript app for managing youth baseball rosters and automatically generating fair game lineups. Coaches add their roster, set player position preferences, and the app generates balanced lineups that rotate players through positions across innings.
 

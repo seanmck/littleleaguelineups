@@ -13,7 +13,7 @@ export default function Navbar() {
     <nav className="bg-gradient-to-b from-green-900 to-green-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <Link to="/" className="text-2xl font-display tracking-wide hover:text-green-200 transition-colors">
-        Little League Coach
+        Fair Ball
       </Link>
       <div className="flex items-center space-x-6">
         {token ? (
