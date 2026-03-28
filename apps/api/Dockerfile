@@ -30,4 +30,4 @@ COPY --from=builder /app/packages/types ./packages/types
 
 EXPOSE 3000
 
-CMD ["npx", "tsx", "apps/api/index.ts"]
+CMD ["npx", "tsx", "apps/api/src/index.ts"]
