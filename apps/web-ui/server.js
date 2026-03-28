@@ -28,17 +28,31 @@ const MIME_TYPES = {
 const STATIC_DIR = path.join(__dirname, 'dist');
 
 function serveStatic(req, res) {
-  let filePath = path.join(STATIC_DIR, req.url === '/' ? 'index.html' : req.url);
-  const ext = path.extname(filePath);
+  try {
+    const parsed = url.parse(req.url);
+    const pathname = decodeURIComponent(parsed.pathname || '/');
+    let filePath = path.join(STATIC_DIR, pathname === '/' ? 'index.html' : pathname);
 
-  if (!fs.existsSync(filePath) || !ext) {
-    filePath = path.join(STATIC_DIR, 'index.html');
+    // Prevent path traversal
+    if (!filePath.startsWith(STATIC_DIR)) {
+      filePath = path.join(STATIC_DIR, 'index.html');
+    }
+
+    const ext = path.extname(filePath);
+
+    if (!ext || !fs.existsSync(filePath)) {
+      filePath = path.join(STATIC_DIR, 'index.html');
+    }
+
+    const contentType = MIME_TYPES[path.extname(filePath)] || 'application/octet-stream';
+    const content = fs.readFileSync(filePath);
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content);
+  } catch (err) {
+    console.error('Static file error:', err.message);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Internal server error');
   }
-
-  const contentType = MIME_TYPES[path.extname(filePath)] || 'application/octet-stream';
-  const content = fs.readFileSync(filePath);
-  res.writeHead(200, { 'Content-Type': contentType });
-  res.end(content);
 }
 
 function proxyToApi(req, res) {
@@ -73,6 +87,7 @@ function proxyToApi(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  console.log(`${req.method} ${req.url}`);
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
@@ -83,6 +98,19 @@ const server = http.createServer((req, res) => {
   }
 });
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Web server running on port ${PORT}, proxying /api/ to ${API_URL}`);
+  console.log(`Static files from ${STATIC_DIR}`);
+  console.log(`Directory exists: ${fs.existsSync(STATIC_DIR)}`);
+  if (fs.existsSync(STATIC_DIR)) {
+    console.log(`Files: ${fs.readdirSync(STATIC_DIR).join(', ')}`);
+  }
 });
