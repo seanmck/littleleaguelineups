@@ -5,8 +5,9 @@ if [ -z "$API_URL" ]; then
 fi
 export PORT="${PORT:-80}"
 
-# Extract nameserver from resolv.conf for nginx resolver directive
-RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+# Extract IPv4 nameserver from resolv.conf for nginx resolver directive
+# Skip IPv6 addresses as nginx requires bracket syntax for them
+RESOLVER=$(awk '/^nameserver/{ if ($2 !~ /:/) {print $2; exit} }' /etc/resolv.conf)
 export RESOLVER="${RESOLVER:-8.8.8.8}"
 
 echo "Starting nginx on port $PORT with API_URL=$API_URL resolver=$RESOLVER"
