@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="30" fill="#f5f5f0" stroke="#cc0000" stroke-width="2"/>
+  <path d="M18 6 C14 12, 12 20, 12 32 C12 44, 14 52, 18 58" fill="none" stroke="#cc0000" stroke-width="2" stroke-linecap="round"/>
+  <path d="M46 6 C50 12, 52 20, 52 32 C52 44, 50 52, 46 58" fill="none" stroke="#cc0000" stroke-width="2" stroke-linecap="round"/>
+  <!-- Left stitching -->
+  <line x1="16" y1="10" x2="12" y2="14" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="16" x2="10" y2="20" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="12" y1="22" x2="9" y2="26" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="12" y1="28" x2="9" y2="32" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="12" y1="34" x2="9" y2="38" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="12" y1="40" x2="10" y2="44" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="46" x2="12" y2="50" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="52" x2="14" y2="56" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Right stitching -->
+  <line x1="48" y1="10" x2="52" y2="14" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="50" y1="16" x2="54" y2="20" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="52" y1="22" x2="55" y2="26" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="52" y1="28" x2="55" y2="32" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="52" y1="34" x2="55" y2="38" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="52" y1="40" x2="54" y2="44" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="50" y1="46" x2="52" y2="50" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="48" y1="52" x2="50" y2="56" stroke="#cc0000" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
