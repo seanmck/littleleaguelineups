@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import posthog from 'posthog-js';
 import { Button, Input, ErrorBanner } from '../components/ui';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +26,7 @@ export default function SignupPage() {
       const res = await fetch(`${API_BASE}/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, name: name.trim() || undefined, inviteToken }),
       });
 
       if (!res.ok) {
@@ -39,7 +42,7 @@ export default function SignupPage() {
         posthog.identify(data.accountId.toString());
       }
       posthog.capture('signup_submitted');
-      navigate('/dashboard');
+      navigate(data.joinedTeamId ? `/teams/${data.joinedTeamId}/roster` : '/dashboard');
     } catch (err) {
       setError('Network error');
     }
@@ -48,8 +51,20 @@ export default function SignupPage() {
   return (
     <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-lg animate-scale-in">
       <h1 className="text-3xl font-display text-green-900 mb-6 text-center">Create an Account</h1>
+      {inviteToken && (
+        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 mb-4">
+          You've been invited to join a team! Create an account to get started.
+        </div>
+      )}
       {error && <ErrorBanner message={error} />}
       <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <Input
+          type="text"
+          label="Name"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <Input
           type="email"
           label="Email"

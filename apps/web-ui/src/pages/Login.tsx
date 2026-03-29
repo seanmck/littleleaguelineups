@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import posthog from 'posthog-js';
 import { Button, Input, ErrorBanner } from '../components/ui';
 
@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +37,7 @@ export default function LoginPage() {
         posthog.identify(data.accountId.toString());
       }
       posthog.capture('login_submitted');
-      navigate('/dashboard');
+      navigate(from ? `${from.pathname}${from.search || ''}` : '/dashboard', { replace: true });
     } catch (err) {
       setError('Network error');
     }
