@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Player, Team, Position } from '../types';
+import { Player, Team, Position, BattingOrderStrategy, BATTING_ORDER_STRATEGIES } from '@lineup/types';
 import { LoadingState, ErrorBanner, EmptyState, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -102,6 +102,41 @@ function RosterPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-display text-green-900">Roster</h2>
         <span className="text-sm text-slate-400 font-semibold">{players.length} players</span>
+      </div>
+
+      {/* Team Settings */}
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Default Batting Order</label>
+            <select
+              value={(team as any)?.battingOrderStrategy ?? 'rotate'}
+              onChange={async (e) => {
+                const strategy = e.target.value as BattingOrderStrategy;
+                if (!teamId) return;
+                try {
+                  const res = await apiFetch(`/teams/${teamId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ battingOrderStrategy: strategy }),
+                  });
+                  if (res.ok) {
+                    const updated = await res.json();
+                    setTeam(updated);
+                  }
+                } catch {}
+              }}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+            >
+              {BATTING_ORDER_STRATEGIES.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              {BATTING_ORDER_STRATEGIES.find(s => s.value === ((team as any)?.battingOrderStrategy ?? 'rotate'))?.description}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Add Player — prominent at top */}

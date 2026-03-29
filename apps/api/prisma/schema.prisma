@@ -15,11 +15,12 @@ model Account {
 }
 
 model Team {
-  id        Int              @id @default(autoincrement())
-  name      String
-  members   TeamMembership[] // back-reference
-  games     Game[]
-  players   Player[]
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  battingOrderStrategy BattingOrderStrategy  @default(rotate)
+  members              TeamMembership[]
+  games                Game[]
+  players              Player[]
 }
 
 model TeamMembership {
@@ -39,6 +40,13 @@ enum TeamRole {
   parent
 }
 
+enum BattingOrderStrategy {
+  rotate
+  keepSame
+  continue
+  balancedFairness
+}
+
 model Player {
   id                 Int      @id @default(autoincrement())
   name               String
@@ -50,14 +58,17 @@ model Player {
 }
 
 model Game {
-  id        Int      @id @default(autoincrement())
-  date      DateTime
-  teamId    Int
-  team      Team     @relation(fields: [teamId], references: [id])
-  lineup    Json?
-  players   Player[] @relation("GamePlayers")
-  opponent  String?
-  homeScore Int?
-  awayScore Int?
-  innings   Int      @default(4)
+  id                   Int                   @id @default(autoincrement())
+  date                 DateTime
+  teamId               Int
+  team                 Team                  @relation(fields: [teamId], references: [id])
+  lineup               Json?
+  battingOrder         Json?
+  battingOrderStrategy BattingOrderStrategy?
+  players              Player[]              @relation("GamePlayers")
+  opponent             String?
+  homeScore            Int?
+  awayScore            Int?
+  lastBatterIndex      Int?
+  innings              Int                   @default(4)
 }

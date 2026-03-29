@@ -34,9 +34,19 @@ export interface Player {
   avoidPositions?: String[];
 }
 
+export type BattingOrderStrategy = 'rotate' | 'keepSame' | 'continue' | 'balancedFairness';
+
+export const BATTING_ORDER_STRATEGIES: { value: BattingOrderStrategy; label: string; description: string }[] = [
+  { value: 'rotate', label: 'Rotate', description: 'Last batter moves to the top of the order each game' },
+  { value: 'keepSame', label: 'Keep Same', description: 'Reuse the batting order from the previous game' },
+  { value: 'continue', label: 'Continue', description: 'Pick up from where the last game left off' },
+  { value: 'balancedFairness', label: 'Balanced Fairness', description: 'Optimize order for season-long fairness' },
+];
+
 export interface Team {
   id: string;
   name: string;
+  battingOrderStrategy?: BattingOrderStrategy;
 }
 
 export interface Game {
@@ -50,6 +60,9 @@ export interface Game {
   homeScore?: number;
   awayScore?: number;
   innings?: number;
+  battingOrder?: number[];
+  battingOrderStrategy?: BattingOrderStrategy;
+  lastBatterIndex?: number | null;
 }
 
 export type GameResult = 'W' | 'L' | 'T' | null;

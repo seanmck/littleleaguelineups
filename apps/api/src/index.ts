@@ -22,9 +22,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 import { PrismaClient } from '@prisma/client';
-import { Game, Player, Lineup, Position, POSITIONS } from '@lineup/types';
+import { Game, Player, Lineup, Position, POSITIONS, BattingOrderStrategy } from '@lineup/types';
 import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
 import { generateLineup } from './lib/generateLineup.js';
+import { generateBattingOrder } from './lib/generateBattingOrder.js';
 
 const prisma = new PrismaClient();
 
@@ -109,6 +110,28 @@ app.get('/api/teams/:id', async (req, res) => {
   }
 });
 
+// Update team settings
+app.put('/api/teams/:id', async (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
+  const { battingOrderStrategy } = req.body;
+
+  const validStrategies: BattingOrderStrategy[] = ['rotate', 'keepSame', 'balancedFairness'];
+  if (battingOrderStrategy && !validStrategies.includes(battingOrderStrategy)) {
+    return res.status(400).json({ error: 'Invalid batting order strategy' });
+  }
+
+  try {
+    const team = await prisma.team.update({
+      where: { id: parseInt(id, 10) },
+      data: { battingOrderStrategy },
+    });
+    res.json(team);
+  } catch (err) {
+    console.error('Error updating team:', err);
+    res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
 // Update a player's details
 app.put('/api/teams/:teamId/players/:playerId', async (req: Request<{ teamId: string; playerId: string }>, res: Response) => {
   const { playerId } = req.params;
@@ -142,7 +165,8 @@ app.delete('/api/teams/:teamId/players/:playerId', async (req: Request<{ teamId:
 // Create a new game for a team
 app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, res: Response) => {
   const { teamId } = req.params;
-  const { date, playerIds, innings } = req.body;
+  const { date, playerIds, innings, battingOrderStrategy: strategyOverride, previousGameLastBatterIndex } = req.body;
+  const teamIdInt = parseInt(teamId, 10);
 
   try {
     // Fetch players from the database
@@ -158,24 +182,56 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
       return res.status(400).json({ error: 'Invalid or missing date' });
     }
 
-    const parsedDate = new Date(date); // Parses YYYY-MM-DD into UTC midnight
+    const parsedDate = new Date(date);
 
     // Validate innings (1-9, default 4)
     const inningsCount = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));
 
-    // Generate the lineup
+    // Determine batting order strategy
+    let strategy: BattingOrderStrategy = strategyOverride;
+    if (!strategy) {
+      const team = await prisma.team.findUnique({ where: { id: teamIdInt } });
+      strategy = (team?.battingOrderStrategy as BattingOrderStrategy) || 'rotate';
+    }
+
+    // Fetch previous games for batting order context
+    const previousGames = await prisma.game.findMany({
+      where: { teamId: teamIdInt },
+      orderBy: { date: 'desc' },
+      select: { id: true, battingOrder: true, lastBatterIndex: true },
+    });
+
+    // If coach marked the last batter during game setup, save it on the previous game
+    if (previousGameLastBatterIndex != null && previousGames.length > 0) {
+      const prevGame = previousGames.find(g => g.battingOrder != null);
+      if (prevGame) {
+        await prisma.game.update({
+          where: { id: prevGame.id },
+          data: { lastBatterIndex: previousGameLastBatterIndex },
+        });
+        prevGame.lastBatterIndex = previousGameLastBatterIndex;
+      }
+    }
+
+    // Generate the lineup and batting order
     const lineup = generateLineup(players, inningsCount);
+    const battingOrder = generateBattingOrder(
+      strategy,
+      players.map(p => p.id),
+      previousGames.map(g => ({
+        battingOrder: g.battingOrder as number[] | null,
+        lastBatterIndex: g.lastBatterIndex,
+      })),
+    );
 
-    // Serialize the lineup to a JSON string
-    const lineupJson = JSON.stringify(lineup);
-
-    // Create the game in the database
     const game = await prisma.game.create({
       data: {
         date: parsedDate,
-        teamId: parseInt(teamId, 10),
+        teamId: teamIdInt,
         innings: inningsCount,
-        lineup: lineupJson, // Store the lineup as a JSON string
+        lineup: JSON.stringify(lineup),
+        battingOrder: JSON.stringify(battingOrder),
+        battingOrderStrategy: strategy,
         players: {
           connect: players.map((player) => ({ id: player.id })),
         },
@@ -233,7 +289,7 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
 // Update a game (opponent, scores, lineup, players)
 app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   const { gameId } = req.params;
-  const { opponent, homeScore, awayScore, lineup, playerIds, innings } = req.body;
+  const { opponent, homeScore, awayScore, lineup, battingOrder, lastBatterIndex, playerIds, innings } = req.body;
 
   try {
     const updateData: {
@@ -241,6 +297,8 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
       homeScore?: number | null;
       awayScore?: number | null;
       lineup?: string;
+      battingOrder?: string;
+      lastBatterIndex?: number | null;
       innings?: number;
       players?: { set: { id: number }[] };
     } = {};
@@ -250,6 +308,8 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     if (homeScore !== undefined) updateData.homeScore = homeScore;
     if (awayScore !== undefined) updateData.awayScore = awayScore;
     if (lineup !== undefined) updateData.lineup = JSON.stringify(lineup);
+    if (battingOrder !== undefined) updateData.battingOrder = JSON.stringify(battingOrder);
+    if (lastBatterIndex !== undefined) updateData.lastBatterIndex = lastBatterIndex;
     if (innings !== undefined) {
       updateData.innings = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));
     }
