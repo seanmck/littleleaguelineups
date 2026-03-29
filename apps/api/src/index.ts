@@ -3,6 +3,7 @@ import cors from 'cors';
 
 import signupRoutes from './routes/signup.js';
 import teamRoutes from './routes/teams.js';
+import invitationRoutes from './routes/invitations.js';
 
 const { PG_HOST, PG_USER, PG_PASSWORD, PG_DB } = process.env;
 
@@ -36,6 +37,7 @@ app.use(express.json());
 
 app.use('/api', signupRoutes);
 app.use('/api', teamRoutes);
+app.use('/api', invitationRoutes);
 
 // Get all teams
 app.get('/api/teams', async (req: Request, res: Response) => {

@@ -7,6 +7,8 @@ import GameSetupPage from './pages/GameSetupPage';
 import GameDetailPage from './pages/GameDetailPage';
 import GamesListPage from './pages/GamesListPage';
 import SeasonRecapPage from './pages/SeasonRecapPage';
+import CoachesPage from './pages/CoachesPage';
+import AcceptInvitationPage from './pages/AcceptInvitationPage';
 import LandingPage from './pages/LandingPage';
 import SignupPage from './pages/Signup';
 import LoginPage from './pages/Login';
@@ -50,12 +52,14 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/teams" element={<TeamSelectPage />} />
+              <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
               <Route path="/teams/:teamId" element={<TeamLayout />}>
                 <Route path="roster" element={<RosterPage />} />
                 <Route path="games" element={<GamesListPage />} />
                 <Route path="games/setup" element={<GameSetupPage />} />
                 <Route path="games/:gameId" element={<GameDetailPage />} />
                 <Route path="season-recap" element={<SeasonRecapPage />} />
+                <Route path="coaches" element={<CoachesPage />} />
               </Route>
             </Route>
           </Routes>

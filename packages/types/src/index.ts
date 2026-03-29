@@ -129,6 +129,26 @@ export function parseLineup(raw: unknown): Lineup | null {
   };
 }
 
+// Team membership types
+
+export interface TeamMember {
+  id: string;
+  accountId: string;
+  email: string;
+  name?: string;
+  role: 'coach' | 'parent';
+}
+
+export interface TeamInvitation {
+  id: string;
+  email: string;
+  teamId: number;
+  status: 'pending' | 'accepted' | 'cancelled';
+  expiresAt: string;
+  createdAt: string;
+  invitedBy: { email: string };
+}
+
 // Season Recap types
 
 // Player reference with innings count (for charts)

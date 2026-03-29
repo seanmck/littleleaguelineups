@@ -8,10 +8,12 @@ datasource db {
 }
 
 model Account {
-  id        String           @id @default(uuid())
-  email     String           @unique
-  password  String
-  teams     TeamMembership[] // back-reference
+  id                 String           @id @default(uuid())
+  email              String           @unique
+  password           String
+  name               String?
+  teams              TeamMembership[]
+  invitationsCreated Invitation[]
 }
 
 model Team {
@@ -21,6 +23,7 @@ model Team {
   members              TeamMembership[]
   games                Game[]
   players              Player[]
+  invitations          Invitation[]
 }
 
 model TeamMembership {
@@ -70,4 +73,27 @@ model Game {
   awayScore            Int?
   lastBatterIndex      Int?
   innings              Int                   @default(4)
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  cancelled
+}
+
+model Invitation {
+  id          String           @id @default(uuid())
+  email       String
+  token       String           @unique
+  teamId      Int
+  invitedById String
+  status      InvitationStatus @default(pending)
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+
+  team        Team             @relation(fields: [teamId], references: [id])
+  invitedBy   Account          @relation(fields: [invitedById], references: [id])
+
+  @@index([token])
+  @@index([email, teamId])
 }

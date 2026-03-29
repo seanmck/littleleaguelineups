@@ -14,7 +14,7 @@ function TeamSelectPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    apiFetch('/teams')
+    apiFetch('/my-teams')
       .then(res => {
         if (!res.ok) throw new Error('Failed to load teams');
         return res.json();

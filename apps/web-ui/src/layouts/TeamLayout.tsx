@@ -43,6 +43,7 @@ function TeamLayout() {
             <NavLink to={`/teams/${teamId}/games/setup`} className={linkClass}>Game Setup</NavLink>
             <NavLink to={`/teams/${teamId}/games`} className={linkClass} end>Schedule</NavLink>
             <NavLink to={`/teams/${teamId}/season-recap`} className={linkClass}>Season Recap</NavLink>
+            <NavLink to={`/teams/${teamId}/coaches`} className={linkClass}>Coaches</NavLink>
           </nav>
         </div>
       </div>
