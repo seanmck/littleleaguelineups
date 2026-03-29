@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { usePostHog } from 'posthog-js/react';
 import TeamSelectPage from './pages/TeamSelectPage';
 import RosterPage from './pages/RosterPage';
@@ -37,6 +37,11 @@ function PostHogPageviewTracker() {
   return null;
 }
 
+function HomeRoute() {
+  const token = localStorage.getItem('token');
+  return token ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+}
+
 function App() {
   return (
     <Router>
@@ -45,7 +50,7 @@ function App() {
         <div className="mx-auto">
           <Navbar />
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/login" element={<LoginPage />} />
 

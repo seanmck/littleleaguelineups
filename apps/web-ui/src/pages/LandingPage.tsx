@@ -21,7 +21,7 @@ function LandingPage() {
             to="/signup"
             className="inline-block bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-lg shadow-green-700/25 transition-all hover:shadow-xl hover:shadow-green-700/30 hover:-translate-y-0.5 active:scale-[0.98] opacity-0 animate-fade-in-up animation-delay-200"
           >
-            Get Started Free
+            Get Started
           </Link>
         </div>
       </section>
