@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import posthog from 'posthog-js';
 import { Player, Game, BattingOrderStrategy, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
@@ -103,6 +104,11 @@ function GameSetupPage() {
       });
 
       const created: Game = await res.json();
+      posthog.capture('game_created', {
+        innings,
+        player_count: selectedIds.length,
+        batting_order_strategy: battingOrderStrategy,
+      });
       navigate(`/teams/${teamId}/games/${created.id}`);
     } catch {
       setError('Failed to create game');

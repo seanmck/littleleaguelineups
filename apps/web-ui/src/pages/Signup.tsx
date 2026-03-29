@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import posthog from 'posthog-js';
 import { Button, Input, ErrorBanner } from '../components/ui';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -33,6 +34,11 @@ export default function SignupPage() {
 
       const data = await res.json();
       localStorage.setItem('token', data.token);
+      if (data.accountId) {
+        localStorage.setItem('accountId', data.accountId.toString());
+        posthog.identify(data.accountId.toString());
+      }
+      posthog.capture('signup_submitted');
       navigate('/dashboard');
     } catch (err) {
       setError('Network error');

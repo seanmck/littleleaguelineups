@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getPrisma } from '../lib/prisma.js';
 import { requireAuth } from '../lib/requireAuth.js';
+import { trackEvent } from '../lib/analytics.js';
 
 const router = Router();
 
@@ -63,6 +64,7 @@ router.post('/teams', requireAuth, async (req, res) => {
       },
     });
 
+    trackEvent(accountId.toString(), 'team_created', { team_name: name });
     res.status(201).json(team);
   } catch (err) {
     console.error('Error creating team:', err);

@@ -26,6 +26,7 @@ import { Game, Player, Lineup, Position, POSITIONS, BattingOrderStrategy, parseL
 import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
 import { generateLineup } from './lib/generateLineup.js';
 import { generateBattingOrder } from './lib/generateBattingOrder.js';
+import { trackEvent, shutdownAnalytics } from './lib/analytics.js';
 
 const prisma = new PrismaClient();
 
@@ -239,6 +240,12 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
 
     console.log('Game created:', game);
 
+    trackEvent(`team:${teamIdInt}`, 'game_created', {
+      team_id: teamIdInt,
+      innings_count: inningsCount,
+      player_count: players.length,
+      batting_order_strategy: strategy,
+    });
     res.status(201).json(game);
   } catch (err) {
     console.error('Error creating game:', err);
@@ -362,4 +369,9 @@ app.get('/api/teams/:teamId/season-recap', async (req: Request<{ teamId: string 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+process.on('SIGTERM', async () => {
+  await shutdownAnalytics();
+  process.exit(0);
 });
