@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Game, Player, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
+import { Game, Player, Lineup, InningPositions, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -21,6 +21,49 @@ function PositionBadge({ position }: { position: string }) {
   );
 }
 
+function findPlayerPosition(inningPositions: InningPositions, playerId: number): string {
+  for (const [pos, value] of Object.entries(inningPositions)) {
+    if (Array.isArray(value)) {
+      if (value.includes(playerId)) return pos;
+    } else if (value === playerId) {
+      return pos;
+    }
+  }
+  return 'Bench';
+}
+
+function swapPositions(lineup: Lineup, inning: number, playerA: number, playerB: number): Lineup {
+  const newLineup: Lineup = JSON.parse(JSON.stringify(lineup));
+  const ip = newLineup.innings[inning];
+  if (!ip) return newLineup;
+
+  const posA = findPlayerPosition(ip, playerA);
+  const posB = findPlayerPosition(ip, playerB);
+
+  if (posA === posB) return newLineup;
+
+  if (posA !== 'Bench' && posB !== 'Bench') {
+    ip[posA] = playerB;
+    ip[posB] = playerA;
+  } else if (posA !== 'Bench' && posB === 'Bench') {
+    ip[posA] = playerB;
+    const benchArr = Array.isArray(ip['Bench']) ? ip['Bench'] as number[] : [];
+    const idx = benchArr.indexOf(playerB);
+    if (idx !== -1) benchArr[idx] = playerA;
+    else benchArr.push(playerA);
+    ip['Bench'] = benchArr;
+  } else if (posA === 'Bench' && posB !== 'Bench') {
+    ip[posB] = playerA;
+    const benchArr = Array.isArray(ip['Bench']) ? ip['Bench'] as number[] : [];
+    const idx = benchArr.indexOf(playerA);
+    if (idx !== -1) benchArr[idx] = playerB;
+    else benchArr.push(playerB);
+    ip['Bench'] = benchArr;
+  }
+
+  return newLineup;
+}
+
 function GameDetailPage() {
   const { gameId, teamId } = useParams();
   const [game, setGame] = useState<Game | null>(null);
@@ -34,6 +77,9 @@ function GameDetailPage() {
     awayScore: '',
   });
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [isEditingLineup, setIsEditingLineup] = useState(false);
+  const [editableLineup, setEditableLineup] = useState<Lineup | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ playerId: number; inning: number } | null>(null);
 
   useEffect(() => {
     if (!teamId || !gameId) return;
@@ -100,6 +146,102 @@ function GameDetailPage() {
     );
   };
 
+  const handleStartEditingLineup = () => {
+    const parsed = parseLineup(game?.lineup);
+    if (!parsed) return;
+    setEditableLineup(JSON.parse(JSON.stringify(parsed)));
+    setIsEditingLineup(true);
+    setSelectedCell(null);
+  };
+
+  const handleCancelLineupEdit = () => {
+    setEditableLineup(null);
+    setIsEditingLineup(false);
+    setSelectedCell(null);
+  };
+
+  const handleSaveLineup = async () => {
+    if (!teamId || !gameId || !editableLineup) return;
+    setIsSaving(true);
+    try {
+      const res = await apiFetch(`/teams/${teamId}/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineup: editableLineup }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGame(updated);
+        setIsEditingLineup(false);
+        setEditableLineup(null);
+        setSelectedCell(null);
+      } else {
+        setError('Failed to save lineup changes');
+      }
+    } catch {
+      setError('Failed to save lineup changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCellClick = (playerId: number, inning: number) => {
+    if (!isEditingLineup || !editableLineup) return;
+    if (!selectedCell) {
+      setSelectedCell({ playerId, inning });
+    } else if (selectedCell.playerId === playerId && selectedCell.inning === inning) {
+      setSelectedCell(null);
+    } else if (selectedCell.inning !== inning) {
+      setSelectedCell({ playerId, inning });
+    } else {
+      const newLineup = swapPositions(editableLineup, inning, selectedCell.playerId, playerId);
+      setEditableLineup(newLineup);
+      setSelectedCell(null);
+    }
+  };
+
+  const handleBattingReorder = (newOrder: number[]) => {
+    if (!editableLineup) return;
+    setEditableLineup({ ...editableLineup, battingOrder: newOrder });
+  };
+
+  const [savingLastBatter, setSavingLastBatter] = useState(false);
+
+  const handleMarkLastBatter = async (idx: number) => {
+    if (isEditingLineup || !teamId || !game) return;
+    const newIndex = game.lastBatterIndex === idx ? null : idx;
+    setSavingLastBatter(true);
+    try {
+      const res = await apiFetch(`/teams/${teamId}/games/${game.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastBatterIndex: newIndex }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGame(updated);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSavingLastBatter(false);
+    }
+  };
+
+  const handleMoveUp = (idx: number) => {
+    if (!editableLineup || idx === 0) return;
+    const newOrder = [...editableLineup.battingOrder];
+    [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+    handleBattingReorder(newOrder);
+  };
+
+  const handleMoveDown = (idx: number) => {
+    if (!editableLineup || idx === editableLineup.battingOrder.length - 1) return;
+    const newOrder = [...editableLineup.battingOrder];
+    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+    handleBattingReorder(newOrder);
+  };
+
   if (error) return <ErrorBanner message={error} />;
   if (!game) return <LoadingState message="Loading game details..." />;
 
@@ -140,15 +282,33 @@ function GameDetailPage() {
           <h2 className="text-3xl font-display text-green-900">{formattedDate}</h2>
         </div>
         <div className="flex gap-2">
-          {!isEditing && game.lineup && (
-            <Button variant="muted" onClick={() => window.print()}>
-              Print Lineup
-            </Button>
-          )}
-          {!isEditing && (
-            <Button variant="primary" onClick={() => setIsEditing(true)}>
-              Edit Game
-            </Button>
+          {isEditingLineup ? (
+            <>
+              <Button variant="positive" onClick={handleSaveLineup} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Lineup'}
+              </Button>
+              <Button variant="muted" onClick={handleCancelLineupEdit}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              {!isEditing && game.lineup && (
+                <Button variant="muted" onClick={() => window.print()}>
+                  Print Lineup
+                </Button>
+              )}
+              {!isEditing && game.lineup && (
+                <Button variant="muted" onClick={handleStartEditingLineup}>
+                  Edit Lineup
+                </Button>
+              )}
+              {!isEditing && (
+                <Button variant="primary" onClick={() => setIsEditing(true)}>
+                  Edit Game
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -249,157 +409,142 @@ function GameDetailPage() {
         )}
       </div>
 
-      {/* Batting Order & Lineup Table */}
+      {/* Unified Lineup Table */}
       {game.lineup && (() => {
         const parsed = parseLineup(game.lineup);
         if (!parsed) return null;
 
-        const inningsCount = game.innings ?? Object.keys(parsed.innings).length ?? 4;
+        const activeLineup = isEditingLineup && editableLineup ? editableLineup : parsed;
+        const inningsCount = game.innings ?? Object.keys(activeLineup.innings).length ?? 4;
         const inningsArray = Array.from({ length: inningsCount }, (_, i) => i);
+        const order = activeLineup.battingOrder;
+        const strategyLabel = BATTING_ORDER_STRATEGIES.find(
+          s => s.value === game.battingOrderStrategy
+        )?.label;
 
         return (
-          <>
-            <BattingOrderCard game={game} lineup={parsed} teamId={teamId!} onUpdate={setGame} />
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
+            <div className="flex items-center gap-3 mb-1 no-print">
+              <h3 className="text-2xl font-display text-green-900">Lineup</h3>
+              {strategyLabel && (
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                  {strategyLabel}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mb-4 no-print">
+              {isEditingLineup
+                ? 'Tap two players in the same inning to swap positions. Use arrows to reorder batting.'
+                : 'Tap a player to mark them as the last batter for this game.'}
+            </p>
 
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
-              <h3 className="text-2xl font-display text-green-900 mb-4 no-print">Field Positions</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="p-3 border-b text-center text-sm font-semibold text-slate-700 w-12">#</th>
+                    <th className="p-3 border-b font-semibold text-slate-700">Player</th>
+                    {inningsArray.map(i => (
+                      <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
+                        Inning {i + 1}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.map((playerId, idx) => {
+                    const player = game.players.find(p => p.id === playerId);
+                    if (!player) return null;
+                    const isLastBatter = game.lastBatterIndex === idx;
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="p-3 border-b font-semibold text-slate-700">Player</th>
-                      {inningsArray.map(i => (
-                        <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
-                          Inning {i + 1}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {game.players.map(player => (
-                      <tr key={player.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 border-b font-semibold text-slate-800">{player.name}</td>
+                    return (
+                      <tr
+                        key={playerId}
+                        className={`transition-colors ${
+                          isLastBatter && !isEditingLineup ? 'bg-amber-50' : ''
+                        } ${
+                          !isEditingLineup ? 'hover:bg-slate-50 cursor-pointer' : ''
+                        }`}
+                        onClick={() => !isEditingLineup && handleMarkLastBatter(idx)}
+                      >
+                        <td className="p-3 border-b text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {isEditingLineup && (
+                              <span className="flex flex-col gap-0.5 no-print">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleMoveUp(idx); }}
+                                  disabled={idx === 0}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-green-700 hover:bg-green-50 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 text-xs transition-colors"
+                                  aria-label="Move up"
+                                >
+                                  ▲
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleMoveDown(idx); }}
+                                  disabled={idx === order.length - 1}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-green-700 hover:bg-green-50 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 text-xs transition-colors"
+                                  aria-label="Move down"
+                                >
+                                  ▼
+                                </button>
+                              </span>
+                            )}
+                            <span className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
+                              isLastBatter && !isEditingLineup ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {idx + 1}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 border-b font-semibold text-slate-800">
+                          {player.name}
+                          {isLastBatter && !isEditingLineup && (
+                            <span className="ml-2 text-xs font-semibold text-amber-700 no-print">
+                              Last batter
+                            </span>
+                          )}
+                        </td>
                         {inningsArray.map(inning => {
-                          const currentInningPositions = parsed.innings[inning];
+                          const currentInningPositions = activeLineup.innings[inning];
                           const position = currentInningPositions
-                            ? Object.keys(currentInningPositions).find(
-                                pos => currentInningPositions[pos] === player.id
-                              ) || 'Bench'
+                            ? findPlayerPosition(currentInningPositions, player.id)
                             : 'Bench';
+
+                          const isSelected = selectedCell?.playerId === player.id && selectedCell?.inning === inning;
+                          const isSwappable = isEditingLineup && selectedCell !== null && selectedCell.inning === inning && selectedCell.playerId !== player.id;
 
                           return (
                             <td
                               key={`${player.id}-${inning}`}
-                              className="p-3 border-b text-center"
+                              className={`p-3 border-b text-center ${
+                                isEditingLineup ? 'cursor-pointer' : ''
+                              } ${
+                                isSelected ? 'ring-2 ring-green-500 ring-inset bg-green-50' : ''
+                              } ${
+                                isSwappable ? 'hover:bg-green-50/50' : ''
+                              }`}
+                              onClick={(e) => {
+                                if (isEditingLineup) {
+                                  e.stopPropagation();
+                                  handleCellClick(player.id, inning);
+                                }
+                              }}
                             >
                               <PositionBadge position={position} />
                             </td>
                           );
                         })}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </>
+          </div>
         );
       })()}
-    </div>
-  );
-}
-
-function BattingOrderCard({
-  game,
-  lineup,
-  teamId,
-  onUpdate,
-}: {
-  game: Game;
-  lineup: import('@lineup/types').Lineup;
-  teamId: string;
-  onUpdate: (game: Game) => void;
-}) {
-  const order = lineup.battingOrder;
-  const strategyLabel = BATTING_ORDER_STRATEGIES.find(
-    s => s.value === game.battingOrderStrategy
-  )?.label;
-
-  const [savingIndex, setSavingIndex] = useState<number | null>(null);
-
-  const handleMarkLastBatter = async (idx: number) => {
-    const newIndex = game.lastBatterIndex === idx ? null : idx;
-    setSavingIndex(idx);
-    try {
-      const res = await apiFetch(`/teams/${teamId}/games/${game.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lastBatterIndex: newIndex }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        onUpdate(updated);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setSavingIndex(null);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
-      <div className="flex items-center gap-3 mb-1">
-        <h3 className="text-2xl font-display text-green-900">Batting Order</h3>
-        {strategyLabel && (
-          <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
-            {strategyLabel}
-          </span>
-        )}
-      </div>
-      <p className="text-xs text-slate-400 mb-4 no-print">
-        Tap a player to mark them as the last batter for this game.
-      </p>
-      <ol className="space-y-1">
-        {order.map((playerId, idx) => {
-          const player = game.players.find(p => p.id === playerId);
-          const isLastBatter = game.lastBatterIndex === idx;
-          return (
-            <li key={playerId}>
-              <button
-                type="button"
-                onClick={() => handleMarkLastBatter(idx)}
-                disabled={savingIndex !== null}
-                className={`w-full flex items-center gap-3 py-1.5 px-3 rounded-lg transition-colors text-left ${
-                  isLastBatter
-                    ? 'bg-amber-50 border border-amber-300 shadow-sm'
-                    : 'hover:bg-slate-50 border border-transparent'
-                } no-print-interactive`}
-              >
-                <span className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
-                  isLastBatter ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {idx + 1}
-                </span>
-                <span className="font-medium text-slate-800 text-sm">
-                  {player?.name ?? `Player #${playerId}`}
-                </span>
-                {isLastBatter && (
-                  <span className="ml-auto text-xs font-semibold text-amber-700 no-print">
-                    Last batter
-                  </span>
-                )}
-              </button>
-              {/* Print-only static row */}
-              <span className="print-only hidden">
-                {idx + 1}. {player?.name ?? `Player #${playerId}`}
-                {isLastBatter ? ' (last batter)' : ''}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
 }
