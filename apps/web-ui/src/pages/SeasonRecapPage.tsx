@@ -175,7 +175,7 @@ function SeasonRecapPage() {
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={pitchingData} layout="vertical">
-                    <XAxis type="number" />
+                    <XAxis type="number" allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={100} />
                     <Tooltip />
                     <Bar dataKey="innings" fill="#15803d" name="Innings Pitched" radius={[0, 4, 4, 0]} />
@@ -200,7 +200,7 @@ function SeasonRecapPage() {
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={benchData} layout="vertical">
-                    <XAxis type="number" />
+                    <XAxis type="number" allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={100} />
                     <Tooltip />
                     <Bar dataKey="benchInnings" fill="#f59e0b" name="Bench Innings" radius={[0, 4, 4, 0]} />
