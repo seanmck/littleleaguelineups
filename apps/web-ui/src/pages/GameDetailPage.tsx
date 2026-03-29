@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Game, Player, calculateGameResult } from '@lineup/types';
+import { Game, Player, calculateGameResult, BATTING_ORDER_STRATEGIES } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -249,6 +249,9 @@ function GameDetailPage() {
         )}
       </div>
 
+      {/* Batting Order */}
+      {game.battingOrder && <BattingOrderCard game={game} teamId={teamId!} onUpdate={setGame} />}
+
       {/* Lineup Table */}
       {game.lineup && (() => {
         const parsedLineup = typeof game.lineup === 'string' ? JSON.parse(game.lineup) : game.lineup;
@@ -300,6 +303,100 @@ function GameDetailPage() {
           </div>
         );
       })()}
+    </div>
+  );
+}
+
+function BattingOrderCard({
+  game,
+  teamId,
+  onUpdate,
+}: {
+  game: Game;
+  teamId: string;
+  onUpdate: (game: Game) => void;
+}) {
+  const order: number[] = typeof game.battingOrder === 'string'
+    ? JSON.parse(game.battingOrder)
+    : game.battingOrder!;
+  const strategyLabel = BATTING_ORDER_STRATEGIES.find(
+    s => s.value === game.battingOrderStrategy
+  )?.label;
+
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+
+  const handleMarkLastBatter = async (idx: number) => {
+    const newIndex = game.lastBatterIndex === idx ? null : idx;
+    setSavingIndex(idx);
+    try {
+      const res = await apiFetch(`/teams/${teamId}/games/${game.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastBatterIndex: newIndex }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onUpdate(updated);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSavingIndex(null);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
+      <div className="flex items-center gap-3 mb-1">
+        <h3 className="text-2xl font-display text-green-900">Batting Order</h3>
+        {strategyLabel && (
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+            {strategyLabel}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-slate-400 mb-4 no-print">
+        Tap a player to mark them as the last batter for this game.
+      </p>
+      <ol className="space-y-1">
+        {order.map((playerId, idx) => {
+          const player = game.players.find(p => p.id === playerId);
+          const isLastBatter = game.lastBatterIndex === idx;
+          return (
+            <li key={playerId}>
+              <button
+                type="button"
+                onClick={() => handleMarkLastBatter(idx)}
+                disabled={savingIndex !== null}
+                className={`w-full flex items-center gap-3 py-1.5 px-3 rounded-lg transition-colors text-left ${
+                  isLastBatter
+                    ? 'bg-amber-50 border border-amber-300 shadow-sm'
+                    : 'hover:bg-slate-50 border border-transparent'
+                } no-print-interactive`}
+              >
+                <span className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
+                  isLastBatter ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {idx + 1}
+                </span>
+                <span className="font-medium text-slate-800 text-sm">
+                  {player?.name ?? `Player #${playerId}`}
+                </span>
+                {isLastBatter && (
+                  <span className="ml-auto text-xs font-semibold text-amber-700 no-print">
+                    Last batter
+                  </span>
+                )}
+              </button>
+              {/* Print-only static row */}
+              <span className="print-only hidden">
+                {idx + 1}. {player?.name ?? `Player #${playerId}`}
+                {isLastBatter ? ' (last batter)' : ''}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
