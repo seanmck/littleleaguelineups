@@ -7,7 +7,7 @@ import type {
   FairnessMetrics,
   PlayerInningsEntry,
 } from '@lineup/types';
-import { POSITIONS, calculateGameResult } from '@lineup/types';
+import { POSITIONS, calculateGameResult, parseLineup } from '@lineup/types';
 
 interface PlayerWithPositions {
   id: number;
@@ -43,18 +43,6 @@ function initializePositionCounts(): Record<Position, number> {
   }
   counts['Bench'] = 0;
   return counts as Record<Position, number>;
-}
-
-function parseLineup(lineupJson: unknown): Lineup | null {
-  if (!lineupJson) return null;
-  if (typeof lineupJson === 'string') {
-    try {
-      return JSON.parse(lineupJson);
-    } catch {
-      return null;
-    }
-  }
-  return lineupJson as Lineup;
 }
 
 function findPlayerPosition(
@@ -147,7 +135,7 @@ export function calculateSeasonRecapStats(
     }
 
     // Process each inning
-    for (const [inningStr, positions] of Object.entries(lineup)) {
+    for (const [inningStr, positions] of Object.entries(lineup.innings)) {
       if (!positions || typeof positions !== 'object') continue;
 
       seasonSummary.totalInnings++;

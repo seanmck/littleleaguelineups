@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Game, Player, calculateGameResult, BATTING_ORDER_STRATEGIES } from '@lineup/types';
+import { Game, Player, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -249,58 +249,61 @@ function GameDetailPage() {
         )}
       </div>
 
-      {/* Batting Order */}
-      {game.battingOrder && <BattingOrderCard game={game} teamId={teamId!} onUpdate={setGame} />}
-
-      {/* Lineup Table */}
+      {/* Batting Order & Lineup Table */}
       {game.lineup && (() => {
-        const parsedLineup = typeof game.lineup === 'string' ? JSON.parse(game.lineup) : game.lineup;
-        const inningsCount = game.innings ?? Object.keys(parsedLineup).length ?? 4;
+        const parsed = parseLineup(game.lineup);
+        if (!parsed) return null;
+
+        const inningsCount = game.innings ?? Object.keys(parsed.innings).length ?? 4;
         const inningsArray = Array.from({ length: inningsCount }, (_, i) => i);
 
         return (
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
-            <h3 className="text-2xl font-display text-green-900 mb-4 no-print">Lineup</h3>
+          <>
+            <BattingOrderCard game={game} lineup={parsed} teamId={teamId!} onUpdate={setGame} />
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50">
-                    <th className="p-3 border-b font-semibold text-slate-700">Player</th>
-                    {inningsArray.map(i => (
-                      <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
-                        Inning {i + 1}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {game.players.map(player => (
-                    <tr key={player.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-3 border-b font-semibold text-slate-800">{player.name}</td>
-                      {inningsArray.map(inning => {
-                        const currentInningLineup = parsedLineup[inning];
-                        const position = currentInningLineup
-                          ? Object.keys(currentInningLineup).find(
-                              pos => currentInningLineup[pos] === player.id
-                            ) || 'Bench'
-                          : 'Bench';
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
+              <h3 className="text-2xl font-display text-green-900 mb-4 no-print">Field Positions</h3>
 
-                        return (
-                          <td
-                            key={`${player.id}-${inning}`}
-                            className="p-3 border-b text-center"
-                          >
-                            <PositionBadge position={position} />
-                          </td>
-                        );
-                      })}
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="p-3 border-b font-semibold text-slate-700">Player</th>
+                      {inningsArray.map(i => (
+                        <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
+                          Inning {i + 1}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {game.players.map(player => (
+                      <tr key={player.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-3 border-b font-semibold text-slate-800">{player.name}</td>
+                        {inningsArray.map(inning => {
+                          const currentInningPositions = parsed.innings[inning];
+                          const position = currentInningPositions
+                            ? Object.keys(currentInningPositions).find(
+                                pos => currentInningPositions[pos] === player.id
+                              ) || 'Bench'
+                            : 'Bench';
+
+                          return (
+                            <td
+                              key={`${player.id}-${inning}`}
+                              className="p-3 border-b text-center"
+                            >
+                              <PositionBadge position={position} />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </>
         );
       })()}
     </div>
@@ -309,16 +312,16 @@ function GameDetailPage() {
 
 function BattingOrderCard({
   game,
+  lineup,
   teamId,
   onUpdate,
 }: {
   game: Game;
+  lineup: import('@lineup/types').Lineup;
   teamId: string;
   onUpdate: (game: Game) => void;
 }) {
-  const order: number[] = typeof game.battingOrder === 'string'
-    ? JSON.parse(game.battingOrder)
-    : game.battingOrder!;
+  const order = lineup.battingOrder;
   const strategyLabel = BATTING_ORDER_STRATEGIES.find(
     s => s.value === game.battingOrderStrategy
   )?.label;

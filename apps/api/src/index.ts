@@ -22,7 +22,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 import { PrismaClient } from '@prisma/client';
-import { Game, Player, Lineup, Position, POSITIONS, BattingOrderStrategy } from '@lineup/types';
+import { Game, Player, Lineup, Position, POSITIONS, BattingOrderStrategy, parseLineup } from '@lineup/types';
 import { calculateSeasonRecapStats } from './lib/seasonRecapCalculator.js';
 import { generateLineup } from './lib/generateLineup.js';
 import { generateBattingOrder } from './lib/generateBattingOrder.js';
@@ -198,12 +198,12 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
     const previousGames = await prisma.game.findMany({
       where: { teamId: teamIdInt },
       orderBy: { date: 'desc' },
-      select: { id: true, battingOrder: true, lastBatterIndex: true },
+      select: { id: true, lineup: true, lastBatterIndex: true },
     });
 
     // If coach marked the last batter during game setup, save it on the previous game
     if (previousGameLastBatterIndex != null && previousGames.length > 0) {
-      const prevGame = previousGames.find(g => g.battingOrder != null);
+      const prevGame = previousGames.find(g => parseLineup(g.lineup)?.battingOrder != null);
       if (prevGame) {
         await prisma.game.update({
           where: { id: prevGame.id },
@@ -213,16 +213,16 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
       }
     }
 
-    // Generate the lineup and batting order
-    const lineup = generateLineup(players, inningsCount);
+    // Generate batting order, then the full lineup (which includes it)
     const battingOrder = generateBattingOrder(
       strategy,
       players.map(p => p.id),
       previousGames.map(g => ({
-        battingOrder: g.battingOrder as number[] | null,
+        battingOrder: parseLineup(g.lineup)?.battingOrder ?? null,
         lastBatterIndex: g.lastBatterIndex,
       })),
     );
+    const lineup = generateLineup(players, inningsCount, battingOrder);
 
     const game = await prisma.game.create({
       data: {
@@ -230,7 +230,6 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
         teamId: teamIdInt,
         innings: inningsCount,
         lineup: JSON.stringify(lineup),
-        battingOrder: JSON.stringify(battingOrder),
         battingOrderStrategy: strategy,
         players: {
           connect: players.map((player) => ({ id: player.id })),
@@ -289,7 +288,7 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
 // Update a game (opponent, scores, lineup, players)
 app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   const { gameId } = req.params;
-  const { opponent, homeScore, awayScore, lineup, battingOrder, lastBatterIndex, playerIds, innings } = req.body;
+  const { opponent, homeScore, awayScore, lineup, lastBatterIndex, playerIds, innings } = req.body;
 
   try {
     const updateData: {
@@ -297,7 +296,6 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
       homeScore?: number | null;
       awayScore?: number | null;
       lineup?: string;
-      battingOrder?: string;
       lastBatterIndex?: number | null;
       innings?: number;
       players?: { set: { id: number }[] };
@@ -308,7 +306,6 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     if (homeScore !== undefined) updateData.homeScore = homeScore;
     if (awayScore !== undefined) updateData.awayScore = awayScore;
     if (lineup !== undefined) updateData.lineup = JSON.stringify(lineup);
-    if (battingOrder !== undefined) updateData.battingOrder = JSON.stringify(battingOrder);
     if (lastBatterIndex !== undefined) updateData.lastBatterIndex = lastBatterIndex;
     if (innings !== undefined) {
       updateData.innings = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));

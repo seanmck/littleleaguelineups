@@ -54,13 +54,12 @@ export interface Game {
   date: string;
   teamId: string;
   players: Player[];
-  lineup: Record<number, Record<string, string>>;
+  lineup: Lineup | null;
   notifiedAt?: string;
   opponent?: string;
   homeScore?: number;
   awayScore?: number;
   innings?: number;
-  battingOrder?: number[];
   battingOrderStrategy?: BattingOrderStrategy;
   lastBatterIndex?: number | null;
 }
@@ -76,9 +75,45 @@ export function calculateGameResult(homeScore?: number, awayScore?: number): Gam
   return 'T';
 }
 
+export interface InningPositions {
+  [position: string]: number | number[];
+}
+
 export interface Lineup {
-  [inning: number]: {
-    [position: string]: number | number[];
+  battingOrder: number[];
+  innings: {
+    [inning: number]: InningPositions;
+  };
+}
+
+/**
+ * Parse a lineup from the database, handling both old format (bare innings map)
+ * and new format (with battingOrder + innings wrapper).
+ * For old games without a battingOrder, one is derived from the player IDs in the lineup.
+ */
+export function parseLineup(raw: unknown): Lineup | null {
+  if (!raw) return null;
+  const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  if (!obj || typeof obj !== 'object') return null;
+
+  // New format: has 'innings' key
+  if ('innings' in obj) {
+    return obj as Lineup;
+  }
+
+  // Old format: bare innings map like { "0": { "P": 5, ... }, "1": { ... } }
+  const innings = obj as { [inning: number]: InningPositions };
+  const playerIds = new Set<number>();
+  for (const positions of Object.values(innings)) {
+    if (!positions || typeof positions !== 'object') continue;
+    for (const val of Object.values(positions)) {
+      if (Array.isArray(val)) val.forEach(id => playerIds.add(id));
+      else if (typeof val === 'number') playerIds.add(val);
+    }
+  }
+  return {
+    battingOrder: Array.from(playerIds),
+    innings,
   };
 }
 

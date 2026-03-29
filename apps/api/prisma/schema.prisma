@@ -63,7 +63,6 @@ model Game {
   teamId               Int
   team                 Team                  @relation(fields: [teamId], references: [id])
   lineup               Json?
-  battingOrder         Json?
   battingOrderStrategy BattingOrderStrategy?
   players              Player[]              @relation("GamePlayers")
   opponent             String?
