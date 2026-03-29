@@ -229,7 +229,7 @@ app.post('/api/teams/:teamId/games', async (req: Request<{ teamId: string }>, re
         date: parsedDate,
         teamId: teamIdInt,
         innings: inningsCount,
-        lineup: JSON.stringify(lineup),
+        lineup: lineup as any,
         battingOrderStrategy: strategy,
         players: {
           connect: players.map((player) => ({ id: player.id })),
@@ -305,7 +305,7 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     if (opponent !== undefined) updateData.opponent = opponent;
     if (homeScore !== undefined) updateData.homeScore = homeScore;
     if (awayScore !== undefined) updateData.awayScore = awayScore;
-    if (lineup !== undefined) updateData.lineup = JSON.stringify(lineup);
+    if (lineup !== undefined) updateData.lineup = lineup;
     if (lastBatterIndex !== undefined) updateData.lastBatterIndex = lastBatterIndex;
     if (innings !== undefined) {
       updateData.innings = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));

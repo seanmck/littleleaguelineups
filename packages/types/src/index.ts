@@ -86,19 +86,31 @@ export interface Lineup {
   };
 }
 
+/** Unwrap a value that may have been double-JSON-stringified by Prisma */
+function unwrap(val: unknown): unknown {
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch { return val; }
+  }
+  return val;
+}
+
 /**
  * Parse a lineup from the database, handling both old format (bare innings map)
  * and new format (with battingOrder + innings wrapper).
+ * Handles double-serialized values from JSON.stringify() into Prisma Json columns.
  * For old games without a battingOrder, one is derived from the player IDs in the lineup.
  */
 export function parseLineup(raw: unknown): Lineup | null {
   if (!raw) return null;
-  const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  const obj = unwrap(raw);
   if (!obj || typeof obj !== 'object') return null;
 
   // New format: has 'innings' key
   if ('innings' in obj) {
-    return obj as Lineup;
+    const battingOrder = unwrap((obj as any).battingOrder);
+    const innings = unwrap((obj as any).innings);
+    if (!Array.isArray(battingOrder) || !innings || typeof innings !== 'object') return null;
+    return { battingOrder, innings: innings as { [inning: number]: InningPositions } };
   }
 
   // Old format: bare innings map like { "0": { "P": 5, ... }, "1": { ... } }
