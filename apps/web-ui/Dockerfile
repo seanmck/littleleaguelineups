@@ -16,6 +16,10 @@ RUN npm install --include=dev
 # Build shared types
 RUN npm run --workspace @lineup/types build
 
+# Accept build-time env vars for Vite (statically replaced during build)
+ARG VITE_POSTHOG_KEY
+ARG VITE_POSTHOG_HOST
+
 # Build web-ui
 RUN npm run --workspace littleleaguelineups build
 
