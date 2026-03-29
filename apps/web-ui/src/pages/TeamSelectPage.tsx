@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import posthog from 'posthog-js';
 import { Team } from '../types';
 import { LoadingState, ErrorBanner, Button, Input, Select } from '../components/ui';
 import { apiFetch } from '../lib/api';
@@ -50,6 +51,7 @@ function TeamSelectPage() {
         throw new Error('No team id returned from API');
       }
 
+      posthog.capture('team_created', { team_name: team.name });
       navigate(`/teams/${team.id}/roster`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team');

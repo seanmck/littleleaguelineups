@@ -1,4 +1,6 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { usePostHog } from 'posthog-js/react';
 import TeamSelectPage from './pages/TeamSelectPage';
 import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
@@ -15,9 +17,28 @@ import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import TeamLayout from './layouts/TeamLayout';
 
+function PostHogPageviewTracker() {
+  const location = useLocation();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture('$pageview', { $current_url: window.location.href });
+  }, [location.pathname, posthog]);
+
+  useEffect(() => {
+    const accountId = localStorage.getItem('accountId');
+    if (accountId && posthog) {
+      posthog.identify(accountId);
+    }
+  }, [posthog]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
+      <PostHogPageviewTracker />
       <main className="min-h-screen bg-gradient-to-br from-white to-green-50">
         <div className="mx-auto">
           <Navbar />

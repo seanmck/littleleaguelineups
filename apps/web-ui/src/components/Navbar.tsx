@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import posthog from 'posthog-js';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -6,6 +7,8 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('accountId');
+    posthog.reset();
     navigate('/');
   };
 

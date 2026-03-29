@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getPrisma } from '../lib/prisma.js';
+import { trackEvent } from '../lib/analytics.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
@@ -33,6 +34,7 @@ router.post('/signup', async (req, res) => {
     console.log('Account created successfully:', { accountId: account.id });
     const token = jwt.sign({ accountId: account.id }, JWT_SECRET, { expiresIn: '7d' });
 
+    trackEvent(account.id.toString(), 'account_created');
     res.json({ token, accountId: account.id });
   } catch (err) {
     console.error('Signup error:', err);
@@ -64,6 +66,7 @@ router.post('/login', async (req, res) => {
     console.log('Login successful:', { accountId: account.id });
     const token = jwt.sign({ accountId: account.id }, JWT_SECRET, { expiresIn: '7d' });
 
+    trackEvent(account.id.toString(), 'login_success');
     res.json({ token, accountId: account.id });
   } catch (err) {
     console.error('Login error:', err);

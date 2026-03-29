@@ -89,6 +89,12 @@ Required for API:
 
 Frontend (optional):
 - `VITE_API_BASE_URL` - API base URL (defaults to `/api`, proxied to localhost:3000 in dev)
+- `VITE_POSTHOG_KEY` - PostHog project API key (required at build time for analytics)
+- `VITE_POSTHOG_HOST` - PostHog instance URL (defaults to `https://us.i.posthog.com`)
+
+Analytics (backend, optional):
+- `POSTHOG_API_KEY` - PostHog project API key
+- `POSTHOG_HOST` - PostHog instance URL (defaults to `https://us.i.posthog.com`)
 
 ## Notes
 
