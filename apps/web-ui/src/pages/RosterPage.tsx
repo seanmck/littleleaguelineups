@@ -129,12 +129,9 @@ function RosterPage() {
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none transition-all"
             >
               {BATTING_ORDER_STRATEGIES.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>{s.label} — {s.description}</option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">
-              {BATTING_ORDER_STRATEGIES.find(s => s.value === ((team as any)?.battingOrderStrategy ?? 'rotate'))?.description}
-            </p>
           </div>
         </div>
       </div>
