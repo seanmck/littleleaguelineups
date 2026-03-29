@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Player, Game, BattingOrderStrategy, BATTING_ORDER_STRATEGIES } from '@lineup/types';
+import { Player, Game, BattingOrderStrategy, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -41,18 +41,18 @@ function GameSetupPage() {
     apiFetch(`/teams/${teamId}/games`)
       .then(res => res.ok ? res.json() : [])
       .then((games: Game[]) => {
-        const prev = games.find(g => g.battingOrder != null);
-        if (prev) {
-          const order = typeof prev.battingOrder === 'string'
-            ? JSON.parse(prev.battingOrder)
-            : prev.battingOrder;
-          setPreviousGame({
-            battingOrder: order,
-            lastBatterIndex: prev.lastBatterIndex ?? null,
-            players: prev.players,
-          });
-          if (prev.lastBatterIndex != null) {
-            setLastBatterIndex(prev.lastBatterIndex);
+        for (const g of games) {
+          const parsed = parseLineup(g.lineup);
+          if (parsed) {
+            setPreviousGame({
+              battingOrder: parsed.battingOrder,
+              lastBatterIndex: g.lastBatterIndex ?? null,
+              players: g.players,
+            });
+            if (g.lastBatterIndex != null) {
+              setLastBatterIndex(g.lastBatterIndex);
+            }
+            break;
           }
         }
       })
