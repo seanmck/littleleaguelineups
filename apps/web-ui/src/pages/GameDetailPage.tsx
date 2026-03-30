@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Game, Player, Lineup, InningPositions, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup } from '@lineup/types';
+import { Game, Player, Lineup, InningPositions, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup, generateLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { apiFetch } from '../lib/api';
 
@@ -30,6 +30,12 @@ function findPlayerPosition(inningPositions: InningPositions, playerId: number):
     }
   }
   return 'Bench';
+}
+
+function removePlayerFromLineup(lineup: Lineup, playerId: number, allPlayers: Player[], inningsCount: number): Lineup {
+  const newBattingOrder = lineup.battingOrder.filter(id => id !== playerId);
+  const remainingPlayers = allPlayers.filter(p => newBattingOrder.includes(p.id));
+  return generateLineup(remainingPlayers, inningsCount, newBattingOrder);
 }
 
 function swapPositions(lineup: Lineup, inning: number, playerA: number, playerB: number): Lineup {
@@ -80,6 +86,7 @@ function GameDetailPage() {
   const [isEditingLineup, setIsEditingLineup] = useState(false);
   const [editableLineup, setEditableLineup] = useState<Lineup | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ playerId: number; inning: number } | null>(null);
+  const [removedPlayerIds, setRemovedPlayerIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!teamId || !gameId) return;
@@ -152,22 +159,30 @@ function GameDetailPage() {
     setEditableLineup(JSON.parse(JSON.stringify(parsed)));
     setIsEditingLineup(true);
     setSelectedCell(null);
+    setRemovedPlayerIds(new Set());
   };
 
   const handleCancelLineupEdit = () => {
     setEditableLineup(null);
     setIsEditingLineup(false);
     setSelectedCell(null);
+    setRemovedPlayerIds(new Set());
   };
 
   const handleSaveLineup = async () => {
-    if (!teamId || !gameId || !editableLineup) return;
+    if (!teamId || !gameId || !editableLineup || !game) return;
     setIsSaving(true);
+    const updateData: { lineup: Lineup; playerIds?: string[] } = { lineup: editableLineup };
+    if (removedPlayerIds.size > 0) {
+      updateData.playerIds = game.players
+        .filter(p => !removedPlayerIds.has(p.id))
+        .map(p => p.id.toString());
+    }
     try {
       const res = await apiFetch(`/teams/${teamId}/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lineup: editableLineup }),
+        body: JSON.stringify(updateData),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -175,6 +190,7 @@ function GameDetailPage() {
         setIsEditingLineup(false);
         setEditableLineup(null);
         setSelectedCell(null);
+        setRemovedPlayerIds(new Set());
       } else {
         setError('Failed to save lineup changes');
       }
@@ -205,27 +221,17 @@ function GameDetailPage() {
     setEditableLineup({ ...editableLineup, battingOrder: newOrder });
   };
 
-  const [savingLastBatter, setSavingLastBatter] = useState(false);
-
-  const handleMarkLastBatter = async (idx: number) => {
+  const handleMarkLastBatter = (idx: number) => {
     if (isEditingLineup || !teamId || !game) return;
     const newIndex = game.lastBatterIndex === idx ? null : idx;
-    setSavingLastBatter(true);
-    try {
-      const res = await apiFetch(`/teams/${teamId}/games/${game.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lastBatterIndex: newIndex }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setGame(updated);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setSavingLastBatter(false);
-    }
+    setGame({ ...game, lastBatterIndex: newIndex });
+    apiFetch(`/teams/${teamId}/games/${game.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastBatterIndex: newIndex }),
+    }).catch(() => {
+      setGame({ ...game, lastBatterIndex: game.lastBatterIndex });
+    });
   };
 
   const handleMoveUp = (idx: number) => {
@@ -240,6 +246,14 @@ function GameDetailPage() {
     const newOrder = [...editableLineup.battingOrder];
     [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
     handleBattingReorder(newOrder);
+  };
+
+  const handleRemovePlayer = (playerId: number) => {
+    if (!editableLineup || !game) return;
+    const inningsCount = game.innings ?? Object.keys(editableLineup.innings).length ?? 4;
+    setEditableLineup(removePlayerFromLineup(editableLineup, playerId, game.players, inningsCount));
+    setRemovedPlayerIds(prev => new Set(prev).add(playerId));
+    if (selectedCell?.playerId === playerId) setSelectedCell(null);
   };
 
   if (error) return <ErrorBanner message={error} />;
@@ -439,13 +453,13 @@ function GameDetailPage() {
             </p>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left border-collapse">
+              <table className="min-w-full text-left border-collapse table-fixed">
                 <thead>
                   <tr className="bg-slate-50">
                     <th className="p-3 border-b text-center text-sm font-semibold text-slate-700 w-12">#</th>
-                    <th className="p-3 border-b font-semibold text-slate-700">Player</th>
+                    <th className="p-3 border-b font-semibold text-slate-700 w-40">Player</th>
                     {inningsArray.map(i => (
-                      <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700">
+                      <th key={i} className="p-3 border-b text-center text-sm font-semibold text-slate-700 w-20">
                         Inning {i + 1}
                       </th>
                     ))}
@@ -499,12 +513,25 @@ function GameDetailPage() {
                           </div>
                         </td>
                         <td className="p-3 border-b font-semibold text-slate-800">
-                          {player.name}
-                          {isLastBatter && !isEditingLineup && (
-                            <span className="ml-2 text-xs font-semibold text-amber-700 no-print">
-                              Last batter
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span>{player.name}</span>
+                            {isLastBatter && !isEditingLineup && (
+                              <span className="text-xs font-semibold text-amber-700 no-print">
+                                Last batter
+                              </span>
+                            )}
+                            {isEditingLineup && order.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleRemovePlayer(player.id); }}
+                                className="ml-auto w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs transition-colors no-print"
+                                aria-label={`Remove ${player.name}`}
+                                title={`Remove ${player.name}`}
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </div>
                         </td>
                         {inningsArray.map(inning => {
                           const currentInningPositions = activeLineup.innings[inning];

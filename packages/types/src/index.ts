@@ -129,6 +129,78 @@ export function parseLineup(raw: unknown): Lineup | null {
   };
 }
 
+/**
+ * Generate a lineup assigning players to field positions for each inning.
+ * Respects avoidPositions, tries to vary assignments across innings,
+ * and handles bench for 11+ players and expanded outfield for 10+ players.
+ */
+export function generateLineup(players: Player[], innings: number = 4, battingOrder: number[]): Lineup {
+  const shuffleArray = <T>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const positionHistory: Record<number, Set<string>> = {};
+  for (const p of players) {
+    positionHistory[p.id] = new Set();
+  }
+
+  const inningsMap: { [inning: number]: InningPositions } = {};
+
+  for (let inning = 0; inning < innings; inning++) {
+    inningsMap[inning] = {};
+    const shuffled = shuffleArray([...players]);
+
+    let positions: Position[];
+    if (players.length >= 10) {
+      positions = [...POSITIONS.slice(0, 7), 'LCF', 'RCF', 'RF'];
+    } else {
+      positions = POSITIONS.slice(0, Math.min(9, players.length));
+    }
+
+    const assigned = new Set<number>();
+
+    for (const pos of positions) {
+      // Prefer: not assigned, doesn't avoid this position, hasn't played it yet
+      const ideal = shuffled.find(p =>
+        !assigned.has(p.id) &&
+        !p.avoidPositions?.includes(pos) &&
+        !positionHistory[p.id]?.has(pos)
+      );
+      // Fallback: not assigned, doesn't avoid this position (allow repeat)
+      const acceptable = !ideal ? shuffled.find(p =>
+        !assigned.has(p.id) &&
+        !p.avoidPositions?.includes(pos)
+      ) : null;
+      // Last resort: anyone not assigned
+      const fallback = !ideal && !acceptable ? shuffled.find(p =>
+        !assigned.has(p.id)
+      ) : null;
+
+      const chosen = ideal ?? acceptable ?? fallback;
+      if (chosen) {
+        inningsMap[inning][pos] = chosen.id;
+        assigned.add(chosen.id);
+        positionHistory[chosen.id]?.add(pos);
+      }
+    }
+
+    const benchPlayers = shuffled.filter(p => !assigned.has(p.id));
+    if (benchPlayers.length > 0) {
+      inningsMap[inning]['Bench'] = benchPlayers.map(p => p.id);
+      for (const p of benchPlayers) {
+        positionHistory[p.id]?.add('Bench');
+      }
+    }
+  }
+
+  return { battingOrder, innings: inningsMap };
+}
+
 // Team membership types
 
 export interface TeamMember {
