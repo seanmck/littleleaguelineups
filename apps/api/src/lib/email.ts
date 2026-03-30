@@ -1,12 +1,10 @@
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@fairball.app';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Fair Ball <noreply@fairball.team>';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export function buildInviteUrl(token: string, hasAccount: boolean): string {
   return hasAccount
@@ -24,16 +22,16 @@ export async function sendInvitationEmail(params: {
   const { toEmail, teamName, inviterEmail, token, hasAccount } = params;
   const inviteUrl = buildInviteUrl(token, hasAccount);
 
-  if (!SENDGRID_API_KEY) {
-    console.log(`[DEV] No SENDGRID_API_KEY set. Invitation email to ${toEmail}:`);
+  if (!resend) {
+    console.log(`[DEV] No RESEND_API_KEY set. Invitation email to ${toEmail}:`);
     console.log(`  Link: ${inviteUrl}`);
     return { inviteUrl, emailSent: false };
   }
 
   try {
-    await sgMail.send({
-      to: toEmail,
+    await resend.emails.send({
       from: FROM_EMAIL,
+      to: toEmail,
       subject: `You've been invited to coach ${teamName} on Fair Ball`,
       html: `
         <h2>You're invited!</h2>
