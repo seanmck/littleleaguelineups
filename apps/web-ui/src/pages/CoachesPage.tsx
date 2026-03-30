@@ -15,10 +15,11 @@ export default function CoachesPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteResult, setInviteResult] = useState<{
-    message: string;
+    email: string;
     inviteUrl?: string;
     emailSent?: boolean;
   } | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const currentAccountId = parseAccountIdFromToken();
 
@@ -80,9 +81,7 @@ export default function CoachesPage() {
 
       const data = await res.json();
       setInviteResult({
-        message: data.emailSent
-          ? 'Invitation sent!'
-          : "Invitation created but email couldn't be sent. Share this link directly:",
+        email: inviteEmail.trim(),
         inviteUrl: data.inviteUrl,
         emailSent: data.emailSent,
       });
@@ -130,6 +129,34 @@ export default function CoachesPage() {
       setInvitations(inv => inv.filter(i => i.id !== invitationId));
     } catch {
       setError('Network error');
+    }
+  }
+
+  async function handleResendInvitation(invitationId: string) {
+    if (!teamId) return;
+    setResendingId(invitationId);
+    setError(null);
+
+    try {
+      const res = await apiFetch(`/teams/${teamId}/invitations/${invitationId}/resend`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.message || 'Failed to resend invitation');
+        return;
+      }
+      const data = await res.json();
+      const inv = invitations.find(i => i.id === invitationId);
+      setInviteResult({
+        email: inv?.email || '',
+        inviteUrl: data.inviteUrl,
+        emailSent: data.emailSent,
+      });
+    } catch {
+      setError('Network error');
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -212,7 +239,15 @@ export default function CoachesPage() {
               ? 'bg-green-50 border border-green-200 text-green-800'
               : 'bg-amber-50 border border-amber-200 text-amber-800'
           }`}>
-            <p className="font-medium">{inviteResult.message}</p>
+            {inviteResult.emailSent ? (
+              <p className="font-medium">
+                Invitation sent to <strong>{inviteResult.email}</strong>. Or copy this link and send it to them another way:
+              </p>
+            ) : (
+              <p className="font-medium">
+                Invitation created for <strong>{inviteResult.email}</strong> but the email couldn't be sent. Copy this link and send it to them directly:
+              </p>
+            )}
             {inviteResult.inviteUrl && (
               <div className="mt-2 flex items-center gap-2">
                 <code className="flex-1 bg-white/60 rounded px-2 py-1 text-xs break-all">
@@ -243,12 +278,21 @@ export default function CoachesPage() {
                     Expires {new Date(inv.expiresAt).toLocaleDateString()}
                   </span>
                 </div>
-                <Button
-                  variant="muted"
-                  onClick={() => handleCancelInvitation(inv.id)}
-                >
-                  Cancel
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={() => handleResendInvitation(inv.id)}
+                    disabled={resendingId === inv.id}
+                  >
+                    {resendingId === inv.id ? 'Sending...' : 'Resend'}
+                  </Button>
+                  <Button
+                    variant="muted"
+                    onClick={() => handleCancelInvitation(inv.id)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

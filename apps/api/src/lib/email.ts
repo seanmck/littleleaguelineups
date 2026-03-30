@@ -15,12 +15,16 @@ export function buildInviteUrl(token: string, hasAccount: boolean): string {
 export async function sendInvitationEmail(params: {
   toEmail: string;
   teamName: string;
+  inviterName: string | null;
   inviterEmail: string;
   token: string;
   hasAccount: boolean;
 }): Promise<{ inviteUrl: string; emailSent: boolean }> {
-  const { toEmail, teamName, inviterEmail, token, hasAccount } = params;
+  const { toEmail, teamName, inviterName, inviterEmail, token, hasAccount } = params;
   const inviteUrl = buildInviteUrl(token, hasAccount);
+  const inviterDisplay = inviterName
+    ? `${inviterName} (${inviterEmail})`
+    : inviterEmail;
 
   if (!resend) {
     console.log(`[DEV] No RESEND_API_KEY set. Invitation email to ${toEmail}:`);
@@ -35,7 +39,7 @@ export async function sendInvitationEmail(params: {
       subject: `You've been invited to coach ${teamName} on Fair Ball`,
       html: `
         <h2>You're invited!</h2>
-        <p>${inviterEmail} has invited you to join <strong>${teamName}</strong> as a coach on Fair Ball.</p>
+        <p>${inviterDisplay} has invited you to join <strong>${teamName}</strong> as a coach on Fair Ball.</p>
         <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#166534;color:white;text-decoration:none;border-radius:8px;font-weight:600;">
           ${hasAccount ? 'Accept Invitation' : 'Sign Up & Join Team'}
         </a></p>

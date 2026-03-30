@@ -61,7 +61,7 @@ router.post('/teams/:teamId/invitations', requireAuth, requireCoach, async (req,
         expiresAt,
       },
       include: {
-        invitedBy: { select: { email: true } },
+        invitedBy: { select: { email: true, name: true } },
         team: { select: { name: true } },
       },
     });
@@ -69,6 +69,7 @@ router.post('/teams/:teamId/invitations', requireAuth, requireCoach, async (req,
     const { inviteUrl, emailSent } = await sendInvitationEmail({
       toEmail: normalizedEmail,
       teamName: invitation.team.name,
+      inviterName: invitation.invitedBy.name,
       inviterEmail: invitation.invitedBy.email,
       token,
       hasAccount: !!existingAccount,
@@ -104,7 +105,7 @@ router.get('/teams/:teamId/invitations', requireAuth, requireCoach, async (req, 
         expiresAt: { gt: new Date() },
       },
       include: {
-        invitedBy: { select: { email: true } },
+        invitedBy: { select: { email: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -147,6 +148,45 @@ router.delete('/teams/:teamId/invitations/:id', requireAuth, requireCoach, async
     res.status(204).send();
   } catch (err) {
     console.error('Error cancelling invitation:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Resend invitation
+router.post('/teams/:teamId/invitations/:id/resend', requireAuth, requireCoach, async (req, res) => {
+  const teamId = parseInt(req.params.teamId, 10);
+  const { id } = req.params;
+
+  try {
+    const prisma = await getPrisma();
+    const invitation = await prisma.invitation.findFirst({
+      where: { id, teamId, status: 'pending', expiresAt: { gt: new Date() } },
+      include: {
+        invitedBy: { select: { email: true, name: true } },
+        team: { select: { name: true } },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ message: 'Invitation not found or expired' });
+    }
+
+    const existingAccount = await prisma.account.findUnique({
+      where: { email: invitation.email },
+    });
+
+    const { inviteUrl, emailSent } = await sendInvitationEmail({
+      toEmail: invitation.email,
+      teamName: invitation.team.name,
+      inviterName: invitation.invitedBy.name,
+      inviterEmail: invitation.invitedBy.email,
+      token: invitation.token,
+      hasAccount: !!existingAccount,
+    });
+
+    res.json({ inviteUrl, emailSent });
+  } catch (err) {
+    console.error('Error resending invitation:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
