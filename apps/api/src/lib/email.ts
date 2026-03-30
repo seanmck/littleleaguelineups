@@ -1,12 +1,10 @@
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@fairball.app';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Fair Ball <noreply@fairball.team>';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export function buildInviteUrl(token: string, hasAccount: boolean): string {
   return hasAccount
@@ -17,27 +15,31 @@ export function buildInviteUrl(token: string, hasAccount: boolean): string {
 export async function sendInvitationEmail(params: {
   toEmail: string;
   teamName: string;
+  inviterName: string | null;
   inviterEmail: string;
   token: string;
   hasAccount: boolean;
 }): Promise<{ inviteUrl: string; emailSent: boolean }> {
-  const { toEmail, teamName, inviterEmail, token, hasAccount } = params;
+  const { toEmail, teamName, inviterName, inviterEmail, token, hasAccount } = params;
   const inviteUrl = buildInviteUrl(token, hasAccount);
+  const inviterDisplay = inviterName
+    ? `${inviterName} (${inviterEmail})`
+    : inviterEmail;
 
-  if (!SENDGRID_API_KEY) {
-    console.log(`[DEV] No SENDGRID_API_KEY set. Invitation email to ${toEmail}:`);
+  if (!resend) {
+    console.log(`[DEV] No RESEND_API_KEY set. Invitation email to ${toEmail}:`);
     console.log(`  Link: ${inviteUrl}`);
     return { inviteUrl, emailSent: false };
   }
 
   try {
-    await sgMail.send({
-      to: toEmail,
+    await resend.emails.send({
       from: FROM_EMAIL,
+      to: toEmail,
       subject: `You've been invited to coach ${teamName} on Fair Ball`,
       html: `
         <h2>You're invited!</h2>
-        <p>${inviterEmail} has invited you to join <strong>${teamName}</strong> as a coach on Fair Ball.</p>
+        <p>${inviterDisplay} has invited you to join <strong>${teamName}</strong> as a coach on Fair Ball.</p>
         <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#166534;color:white;text-decoration:none;border-radius:8px;font-weight:600;">
           ${hasAccount ? 'Accept Invitation' : 'Sign Up & Join Team'}
         </a></p>
