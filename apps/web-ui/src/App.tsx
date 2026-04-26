@@ -4,7 +4,9 @@ import { usePostHog } from 'posthog-js/react';
 import TeamSelectPage from './pages/TeamSelectPage';
 import RosterPage from './pages/RosterPage';
 import GameSetupPage from './pages/GameSetupPage';
-import GameDetailPage from './pages/GameDetailPage';
+import PlanPage from './pages/PlanPage';
+import LivePage from './pages/LivePage';
+import PrintPage from './pages/PrintPage';
 import GamesListPage from './pages/GamesListPage';
 import SeasonRecapPage from './pages/SeasonRecapPage';
 import CoachesPage from './pages/CoachesPage';
@@ -62,7 +64,10 @@ function App() {
                 <Route path="roster" element={<RosterPage />} />
                 <Route path="games" element={<GamesListPage />} />
                 <Route path="games/setup" element={<GameSetupPage />} />
-                <Route path="games/:gameId" element={<GameDetailPage />} />
+                <Route path="games/:gameId" element={<Navigate to="plan" replace />} />
+                <Route path="games/:gameId/plan" element={<PlanPage />} />
+                <Route path="games/:gameId/live" element={<LivePage />} />
+                <Route path="games/:gameId/print" element={<PrintPage />} />
                 <Route path="season-recap" element={<SeasonRecapPage />} />
                 <Route path="coaches" element={<CoachesPage />} />
               </Route>

@@ -5,6 +5,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Install workspace dependencies (idempotent; ensures tsc and other tools are available)
+npm install
+
 # Rebuild types package
 (cd ./packages/types && npm run build)
 (cd ./apps/api && npm install ../../packages/types)

@@ -73,6 +73,8 @@ model Game {
   awayScore            Int?
   lastBatterIndex      Int?
   innings              Int                   @default(4)
+  currentInning        Int?
+  atBatIdx             Int?
 }
 
 enum InvitationStatus {

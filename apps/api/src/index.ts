@@ -297,7 +297,7 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
 // Update a game (opponent, scores, lineup, players)
 app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   const { gameId } = req.params;
-  const { opponent, homeScore, awayScore, lineup, lastBatterIndex, playerIds, innings } = req.body;
+  const { opponent, homeScore, awayScore, lineup, lastBatterIndex, playerIds, innings, currentInning, atBatIdx } = req.body;
 
   try {
     const updateData: {
@@ -307,6 +307,8 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
       lineup?: string;
       lastBatterIndex?: number | null;
       innings?: number;
+      currentInning?: number | null;
+      atBatIdx?: number | null;
       players?: { set: { id: number }[] };
     } = {};
 
@@ -316,6 +318,8 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     if (awayScore !== undefined) updateData.awayScore = awayScore;
     if (lineup !== undefined) updateData.lineup = lineup;
     if (lastBatterIndex !== undefined) updateData.lastBatterIndex = lastBatterIndex;
+    if (currentInning !== undefined) updateData.currentInning = currentInning;
+    if (atBatIdx !== undefined) updateData.atBatIdx = atBatIdx;
     if (innings !== undefined) {
       updateData.innings = Math.min(9, Math.max(1, parseInt(innings, 10) || 4));
     }
