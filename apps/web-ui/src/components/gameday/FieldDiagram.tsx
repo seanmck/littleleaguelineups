@@ -70,6 +70,8 @@ export interface FieldDiagramProps {
   size?: number;
   showNames?: boolean;
   chipScale?: number;
+  benchIds?: number[];
+  subActive?: boolean;
 }
 
 export function FieldDiagram({
@@ -81,6 +83,8 @@ export function FieldDiagram({
   size = 460,
   showNames = true,
   chipScale = 1,
+  benchIds = [],
+  subActive = false,
 }: FieldDiagramProps) {
   const map = pickMap(positions);
   const chipW = 108 * chipScale;
@@ -88,14 +92,32 @@ export function FieldDiagram({
   const tagW = 34 * chipScale;
   const playerById = new Map(players.map(p => [p.id, p]));
 
+  // Bench chips share the field-chip shape but render smaller, in two columns
+  // flanking the catcher (foul-territory area below home plate).
+  const benchScale = 0.7;
+  const benchChipW = 108 * benchScale;
+  const benchChipH = 30 * benchScale;
+  const benchTagW = 34 * benchScale;
+  const benchTopY = 392;
+  const benchRowGap = 4;
+  const benchSlots = [
+    { x: 8, y: benchTopY },
+    { x: 8, y: benchTopY + benchChipH + benchRowGap },
+    { x: 480 - 8 - benchChipW, y: benchTopY },
+    { x: 480 - 8 - benchChipW, y: benchTopY + benchChipH + benchRowGap },
+  ];
+  const visibleBench = benchIds.slice(0, benchSlots.length);
+  const benchOverflow = benchIds.length - visibleBench.length;
+
   return (
     <svg
       viewBox="0 0 480 460"
       width="100%"
-      height={size}
+      height="100%"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Baseball field diagram"
-      style={{ maxWidth: '100%', display: 'block' }}
+      style={{ maxWidth: '100%', maxHeight: '100%', display: 'block' }}
     >
       <defs>
         <pattern id="grassStripes" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -208,6 +230,91 @@ export function FieldDiagram({
           </g>
         );
       })}
+
+      {/* Bench chips — flanking the catcher in the foul-territory area */}
+      {visibleBench.map((pid, i) => {
+        const player = playerById.get(pid);
+        if (!player) return null;
+        const slot = benchSlots[i];
+        return (
+          <g
+            key={`bench-${pid}`}
+            transform={`translate(${slot.x}, ${slot.y})`}
+            filter="url(#chipShadow)"
+            style={{ cursor: onPlayerTap ? 'pointer' : 'default' }}
+            onClick={() => {
+              if (onPlayerTap) onPlayerTap(player, 'Bench' as Position);
+            }}
+          >
+            <rect
+              x="0"
+              y="0"
+              width={benchChipW}
+              height={benchChipH}
+              rx={benchChipH / 2}
+              ry={benchChipH / 2}
+              fill="white"
+              fillOpacity={subActive ? 1 : 0.85}
+              stroke={subActive ? '#f59e0b' : '#94a3b8'}
+              strokeWidth={subActive ? 2 : 1}
+              strokeDasharray={subActive ? undefined : '3 2'}
+            />
+            <clipPath id={`bench-clip-${pid}`}>
+              <rect
+                x="0"
+                y="0"
+                width={benchTagW}
+                height={benchChipH}
+                rx={benchChipH / 2}
+                ry={benchChipH / 2}
+              />
+            </clipPath>
+            <g clipPath={`url(#bench-clip-${pid})`}>
+              <rect x="0" y="0" width={benchTagW + 4} height={benchChipH} fill="#64748b" />
+            </g>
+            <text
+              x={benchTagW / 2}
+              y={benchChipH / 2 + 4 * benchScale}
+              textAnchor="middle"
+              fill="white"
+              style={{
+                fontFamily: '"Bebas Neue", sans-serif',
+                fontSize: 14 * benchScale,
+                letterSpacing: 0.5,
+              }}
+            >
+              BN
+            </text>
+            <text
+              x={benchTagW + 8 * benchScale}
+              y={benchChipH / 2 + 4 * benchScale}
+              fill="#0f172a"
+              style={{
+                fontFamily: 'Nunito, system-ui, sans-serif',
+                fontWeight: 800,
+                fontSize: 14 * benchScale,
+              }}
+            >
+              {truncateName(player.name, 8)}
+            </text>
+          </g>
+        );
+      })}
+      {benchOverflow > 0 && (
+        <text
+          x={240}
+          y={456}
+          textAnchor="middle"
+          fill="#475569"
+          style={{
+            fontFamily: 'Nunito, system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: 10,
+          }}
+        >
+          +{benchOverflow} more on bench
+        </text>
+      )}
     </svg>
   );
 }

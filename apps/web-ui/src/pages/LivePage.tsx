@@ -7,15 +7,14 @@ import {
   InningChips,
   TabSwitcher,
   FieldDiagram,
-  PlayerChip,
   AtBatCard,
   PosBadge,
 } from '../components/gameday';
 import { useLiveGame } from '../hooks/useLiveGame';
 import { useWakeLock } from '../hooks/useWakeLock';
 
-type Tab = 'DEFENSE' | 'BATTING';
-const TABS: readonly Tab[] = ['DEFENSE', 'BATTING'] as const;
+type Tab = 'DEF' | 'BAT';
+const TABS: readonly Tab[] = ['DEF', 'BAT'] as const;
 
 function getBenchIds(lineup: Lineup, inning: number): number[] {
   const ip = lineup.innings[inning];
@@ -79,7 +78,7 @@ function LivePage() {
   const { teamId, gameId } = useParams();
   const navigate = useNavigate();
   const live = useLiveGame(teamId, gameId);
-  const [tab, setTab] = useState<Tab>('DEFENSE');
+  const [tab, setTab] = useState<Tab>('DEF');
   const [subForPos, setSubForPos] = useState<Position | null>(null);
 
   useWakeLock(true);
@@ -169,29 +168,20 @@ function LivePage() {
   };
 
   return (
-    <div className="-mx-4 sm:mx-0 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100">
-      <div className="max-w-7xl mx-auto px-6 pb-6 pt-3 space-y-3">
-        <div className="flex items-center justify-between text-xs">
-          <Link
-            to={`/teams/${teamId}/games/${gameId}/plan`}
-            className="text-slate-400 hover:text-slate-200 underline"
+    <div className="h-[calc(100dvh-117px)] bg-slate-900 text-slate-100 flex flex-col">
+      <div className="flex-1 min-h-0 max-w-7xl w-full mx-auto px-4 pt-1 flex flex-col gap-1.5">
+        {live.error && (
+          <button
+            type="button"
+            onClick={live.clearError}
+            className="block w-full rounded-md bg-amber-900/40 px-2 py-1 text-left text-[11px] text-amber-300 ring-1 ring-amber-700/40"
+            aria-label="Dismiss error"
           >
-            ← Plan
-          </Link>
-          {live.error && (
-            <button
-              type="button"
-              onClick={live.clearError}
-              className="text-amber-400"
-              aria-label="Dismiss error"
-            >
-              {live.error} ✕
-            </button>
-          )}
-        </div>
+            {live.error} ✕
+          </button>
+        )}
 
         <Scoreboard
-          dark
           home={game.homeScore ?? 0}
           away={game.awayScore ?? 0}
           inning={currentInning}
@@ -203,72 +193,52 @@ function LivePage() {
           onDecrementAway={() => live.setAwayScore(Math.max(0, (game.awayScore ?? 0) - 1))}
         />
 
-        <InningChips
-          dark
-          count={inningsCount}
-          active={currentInning}
-          onSelect={n => live.setCurrentInning(n)}
-        />
-
-        {/* Tab switcher: mobile-only; desktop shows both columns */}
-        <div className="flex justify-center pt-1 lg:hidden">
-          <TabSwitcher dark tabs={TABS} value={tab} onChange={setTab} />
+        <div className="flex items-stretch gap-1.5 shrink-0">
+          <InningChips
+            count={inningsCount}
+            active={currentInning}
+            onSelect={n => live.setCurrentInning(n)}
+          />
+          <div className="lg:hidden">
+            <TabSwitcher tabs={TABS} value={tab} onChange={setTab} />
+          </div>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-2 lg:gap-6 lg:items-stretch">
+        <div className="flex-1 min-h-0 grid gap-3 lg:grid-cols-2 lg:gap-6 lg:items-stretch">
           {/* DEFENSE column */}
-          <div className={`flex-col gap-3 ${tab === 'DEFENSE' ? 'flex' : 'hidden lg:flex'}`}>
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 p-2 mx-auto w-full max-w-2xl lg:max-w-none">
+          <div className={`min-h-0 flex-col gap-1.5 ${tab === 'DEF' ? 'flex' : 'hidden lg:flex'}`}>
+            {subForPos && (
+              <div className="flex items-center justify-between gap-2 rounded-md bg-amber-900/40 px-2 py-1 text-[11px] text-amber-300 ring-1 ring-amber-700/40 shrink-0">
+                <span className="flex items-center gap-1">
+                  Tap a bench player to sub in at <PosBadge pos={subForPos} size="xs" />
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSubForPos(null)}
+                  className="underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            <div className="rounded-2xl bg-slate-900 border border-slate-800 p-2 mx-auto w-full max-w-2xl lg:max-w-none flex-1 min-h-0 flex items-center justify-center">
               <FieldDiagram
                 inning={inningPositions}
                 players={game.players}
                 positions={fieldPositions}
                 highlightPid={currentBatterId}
-                onPlayerTap={handleFielderTap}
+                onPlayerTap={(player, pos) => {
+                  if (pos === 'Bench') handleBenchSwap(player.id);
+                  else handleFielderTap(player, pos);
+                }}
+                benchIds={benchIds}
+                subActive={subForPos != null}
               />
             </div>
-
-            {benchIds.length > 0 && (
-              <div className="rounded-2xl bg-slate-900 border border-slate-800 p-3 lg:flex-1">
-                <div className="font-display text-sm tracking-widest text-slate-400 mb-2">
-                  BENCH
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {benchIds.map(pid => {
-                    const p = playersById.get(pid);
-                    if (!p) return null;
-                    return (
-                      <PlayerChip
-                        key={pid}
-                        dark
-                        dense
-                        player={p}
-                        pos="Bench"
-                        onClick={subForPos ? () => handleBenchSwap(pid) : undefined}
-                        isHighlight={subForPos != null}
-                      />
-                    );
-                  })}
-                </div>
-                {subForPos && (
-                  <p className="mt-3 text-xs text-amber-300">
-                    Tap a bench player to sub them in at <PosBadge pos={subForPos} size="xs" />.
-                    {' '}
-                    <button
-                      type="button"
-                      onClick={() => setSubForPos(null)}
-                      className="underline"
-                    >
-                      Cancel
-                    </button>
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* BATTING column */}
-          <div className={`flex-col gap-3 ${tab === 'BATTING' ? 'flex' : 'hidden lg:flex'}`}>
+          <div className={`min-h-0 flex-col gap-3 ${tab === 'BAT' ? 'flex' : 'hidden lg:flex'}`}>
             <AtBatCard
               player={currentBatter ?? null}
               pos={currentBatterPos ?? undefined}
@@ -286,11 +256,11 @@ function LivePage() {
               />
             )}
             {upNextIds.length > 0 && (
-              <div className="rounded-2xl bg-slate-900 border border-slate-800 p-3 lg:flex-1">
-                <div className="font-display text-sm tracking-widest text-slate-400 mb-2">
+              <div className="rounded-2xl bg-slate-900 border border-slate-800 p-3 flex-1 min-h-0 flex flex-col">
+                <div className="font-display text-sm tracking-widest text-slate-400 mb-2 shrink-0">
                   UP NEXT
                 </div>
-                <ol className="space-y-1.5">
+                <ol className="space-y-1.5 flex-1 min-h-0 overflow-y-auto pr-1">
                   {upNextIds.map((pid, i) => {
                     const p = playersById.get(pid);
                     if (!p) return null;
@@ -311,27 +281,27 @@ function LivePage() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Action bar (in flow, immediately under the content) */}
-        <div className="flex gap-2 pt-2">
-          <button
-            type="button"
-            onClick={handleNextBatter}
-            disabled={battingOrder.length === 0}
-            className="flex-1 rounded-xl bg-positive hover:bg-positive-hover disabled:opacity-50 text-white font-display text-lg tracking-wider py-3 transition-colors active:scale-[0.98]"
-            aria-label="Advance to next batter"
-          >
-            Next Batter ›
-          </button>
-          <button
-            type="button"
-            onClick={handleEndInning}
-            className="rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-display text-lg tracking-wider py-3 px-5 transition-colors active:scale-[0.98]"
-            aria-label={isFinalInning ? 'End game and return to plan' : 'End current inning'}
-          >
-            {isFinalInning ? 'End Game' : 'End Inning'}
-          </button>
-        </div>
+      {/* Action bar — pinned at the bottom of the live viewport */}
+      <div className="shrink-0 max-w-7xl w-full mx-auto px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex gap-2">
+        <button
+          type="button"
+          onClick={handleNextBatter}
+          disabled={battingOrder.length === 0}
+          className="flex-1 rounded-xl bg-positive hover:bg-positive-hover disabled:opacity-50 text-white font-display text-lg tracking-wider py-3 transition-colors active:scale-[0.98]"
+          aria-label="Advance to next batter"
+        >
+          Next Batter ›
+        </button>
+        <button
+          type="button"
+          onClick={handleEndInning}
+          className="rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 font-display text-lg tracking-wider py-3 px-5 transition-colors active:scale-[0.98]"
+          aria-label={isFinalInning ? 'End game and return to plan' : 'End current inning'}
+        >
+          {isFinalInning ? 'End Game' : 'End Inning'}
+        </button>
       </div>
     </div>
   );
