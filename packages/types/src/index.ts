@@ -62,6 +62,8 @@ export interface Game {
   innings?: number;
   battingOrderStrategy?: BattingOrderStrategy;
   lastBatterIndex?: number | null;
+  currentInning?: number | null;
+  atBatIdx?: number | null;
 }
 
 export type GameResult = 'W' | 'L' | 'T' | null;

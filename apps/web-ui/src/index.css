@@ -114,9 +114,38 @@
     padding: 1px 6px;
   }
 
-  /* Fit to page */
+  /* Fit to page (default landscape for plan view) */
   @page {
     margin: 0.5in;
     size: landscape;
   }
+
+  /* Letter-portrait overrides for the dedicated print card route */
+  body.print-card-mode {
+    background: white !important;
+  }
+  body.print-card-mode nav,
+  body.print-card-mode footer,
+  body.print-card-mode .no-print {
+    display: none !important;
+  }
+  body.print-card-mode .print-card {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+}
+
+body.print-card-mode {
+  background: #f1f5f9;
+}
+
+/* In-Game / live route: dark theme overrides */
+body.live-mode,
+body.live-mode main {
+  background: #020617 !important;
+  background-image: none !important;
+}
+body.live-mode footer {
+  display: none !important;
 }

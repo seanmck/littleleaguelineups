@@ -1,25 +1,9 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Game, Player, Lineup, InningPositions, calculateGameResult, BATTING_ORDER_STRATEGIES, parseLineup, generateLineup } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
+import { PosBadge } from '../components/gameday';
 import { apiFetch } from '../lib/api';
-
-function getPositionBadge(position: string): { bg: string; text: string } {
-  if (position === 'P') return { bg: 'bg-red-100', text: 'text-red-800' };
-  if (position === 'C') return { bg: 'bg-blue-100', text: 'text-blue-800' };
-  if (['1B', '2B', '3B', 'SS'].includes(position)) return { bg: 'bg-green-100', text: 'text-green-800' };
-  if (['LF', 'CF', 'RF', 'LCF', 'RCF'].includes(position)) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
-  return { bg: 'bg-slate-100', text: 'text-slate-600' }; // Bench
-}
-
-function PositionBadge({ position }: { position: string }) {
-  const { bg, text } = getPositionBadge(position);
-  return (
-    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${bg} ${text}`}>
-      {position}
-    </span>
-  );
-}
 
 function findPlayerPosition(inningPositions: InningPositions, playerId: number): string {
   for (const [pos, value] of Object.entries(inningPositions)) {
@@ -70,8 +54,9 @@ function swapPositions(lineup: Lineup, inning: number, playerA: number, playerB:
   return newLineup;
 }
 
-function GameDetailPage() {
+function PlanPage() {
   const { gameId, teamId } = useParams();
+  const navigate = useNavigate();
   const [game, setGame] = useState<Game | null>(null);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -271,21 +256,14 @@ function GameDetailPage() {
     ? `${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Tied'} ${game.homeScore}-${game.awayScore}`
     : null;
 
+  const liveInProgress =
+    game.currentInning !== undefined && game.currentInning !== null;
+  const hasLineup = !!game.lineup;
+
   return (
     <div className="space-y-6">
-      {/* Print-only header (hidden on screen) */}
-      <div className="print-only hidden">
-        <h1 style={{ fontSize: '18pt', fontWeight: 'bold', marginBottom: '4px' }}>
-          Lineup — {formattedDate}
-        </h1>
-        {game.opponent && (
-          <p style={{ fontSize: '12pt', marginBottom: '8px' }}>vs. {game.opponent}</p>
-        )}
-        <hr style={{ marginBottom: '12px' }} />
-      </div>
-
       {/* Header with back link */}
-      <div className="flex justify-between items-start no-print">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
           <Link
             to={`/teams/${teamId}/games`}
@@ -295,7 +273,7 @@ function GameDetailPage() {
           </Link>
           <h2 className="text-3xl font-display text-green-900">{formattedDate}</h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {isEditingLineup ? (
             <>
               <Button variant="positive" onClick={handleSaveLineup} disabled={isSaving}>
@@ -307,12 +285,15 @@ function GameDetailPage() {
             </>
           ) : (
             <>
-              {!isEditing && game.lineup && (
-                <Button variant="muted" onClick={() => window.print()}>
-                  Print Lineup
+              {!isEditing && hasLineup && (
+                <Button
+                  variant="muted"
+                  onClick={() => navigate(`/teams/${teamId}/games/${gameId}/print`)}
+                >
+                  Print Card
                 </Button>
               )}
-              {!isEditing && game.lineup && (
+              {!isEditing && hasLineup && (
                 <Button variant="muted" onClick={handleStartEditingLineup}>
                   Edit Lineup
                 </Button>
@@ -322,13 +303,37 @@ function GameDetailPage() {
                   Edit Game
                 </Button>
               )}
+              {!isEditing && hasLineup && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/teams/${teamId}/games/${gameId}/live`)}
+                  className="rounded-lg px-5 py-2 font-display text-lg tracking-wider bg-amber-400 hover:bg-amber-500 text-slate-900 shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+                >
+                  ▶ {liveInProgress ? 'Resume Game' : 'Start Game'}
+                </button>
+              )}
             </>
           )}
         </div>
       </div>
 
+      {liveInProgress && !isEditing && !isEditingLineup && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-center justify-between gap-3">
+          <span>
+            <span className="font-bold">Game in progress</span> — currently in inning{' '}
+            {(game.currentInning ?? 0) + 1}.
+          </span>
+          <Link
+            to={`/teams/${teamId}/games/${gameId}/live`}
+            className="font-bold underline hover:no-underline"
+          >
+            Resume →
+          </Link>
+        </div>
+      )}
+
       {/* Game Info Section */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4 no-print">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4">
         {isEditing ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -437,8 +442,8 @@ function GameDetailPage() {
         )?.label;
 
         return (
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 print-flat">
-            <div className="flex items-center gap-3 mb-1 no-print">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-1">
               <h3 className="text-2xl font-display text-green-900">Lineup</h3>
               {strategyLabel && (
                 <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
@@ -446,7 +451,7 @@ function GameDetailPage() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-4 no-print">
+            <p className="text-xs text-slate-400 mb-4">
               {isEditingLineup
                 ? 'Tap two players in the same inning to swap positions. Use arrows to reorder batting.'
                 : 'Tap a player to mark them as the last batter for this game.'}
@@ -484,7 +489,7 @@ function GameDetailPage() {
                         <td className="p-3 border-b text-center">
                           <div className="flex items-center justify-center gap-1">
                             {isEditingLineup && (
-                              <span className="flex flex-col gap-0.5 no-print">
+                              <span className="flex flex-col gap-0.5">
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handleMoveUp(idx); }}
@@ -516,7 +521,7 @@ function GameDetailPage() {
                           <div className="flex items-center gap-2">
                             <span>{player.name}</span>
                             {isLastBatter && !isEditingLineup && (
-                              <span className="text-xs font-semibold text-amber-700 no-print">
+                              <span className="text-xs font-semibold text-amber-700">
                                 Last batter
                               </span>
                             )}
@@ -524,7 +529,7 @@ function GameDetailPage() {
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); handleRemovePlayer(player.id); }}
-                                className="ml-auto w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs transition-colors no-print"
+                                className="ml-auto w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs transition-colors"
                                 aria-label={`Remove ${player.name}`}
                                 title={`Remove ${player.name}`}
                               >
@@ -559,7 +564,7 @@ function GameDetailPage() {
                                 }
                               }}
                             >
-                              <PositionBadge position={position} />
+                              <PosBadge pos={position} size="sm" />
                             </td>
                           );
                         })}
@@ -576,4 +581,4 @@ function GameDetailPage() {
   );
 }
 
-export default GameDetailPage;
+export default PlanPage;
