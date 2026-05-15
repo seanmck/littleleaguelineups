@@ -4,6 +4,7 @@ import type { Game, InningPositions, Position } from '@lineup/types';
 import { parseLineup, POSITIONS } from '@lineup/types';
 import { LoadingState, ErrorBanner, Button } from '../components/ui';
 import { apiFetch } from '../lib/api';
+import { formatGameDate } from '../lib/dates';
 
 const PRINT_PAGE_STYLE = `@page { size: letter portrait; margin: 0.5in; }`;
 
@@ -80,7 +81,7 @@ function PrintPage() {
   }
   const orderedPositions = POSITIONS.filter(p => positionsUsed.has(p));
 
-  const formattedDate = new Date(game.date).toLocaleDateString(undefined, {
+  const formattedDate = formatGameDate(game.date, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
