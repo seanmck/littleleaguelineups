@@ -4,6 +4,7 @@ import { Game, Player, Lineup, InningPositions, calculateGameResult, BATTING_ORD
 import { LoadingState, ErrorBanner, Button, Input } from '../components/ui';
 import { PosBadge } from '../components/gameday';
 import { apiFetch } from '../lib/api';
+import { formatGameDate, toDateInputValue } from '../lib/dates';
 
 function findPlayerPosition(inningPositions: InningPositions, playerId: number): string {
   for (const [pos, value] of Object.entries(inningPositions)) {
@@ -63,6 +64,7 @@ function PlanPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
+    date: '',
     opponent: '',
     homeScore: '',
     awayScore: '',
@@ -84,6 +86,7 @@ function PlanPage() {
       .then(data => {
         setGame(data);
         setEditForm({
+          date: toDateInputValue(data.date),
           opponent: data.opponent || '',
           homeScore: data.homeScore?.toString() || '',
           awayScore: data.awayScore?.toString() || '',
@@ -103,6 +106,7 @@ function PlanPage() {
     setIsSaving(true);
 
     const updateData = {
+      date: editForm.date,
       opponent: editForm.opponent || null,
       homeScore: editForm.homeScore ? parseInt(editForm.homeScore) : null,
       awayScore: editForm.awayScore ? parseInt(editForm.awayScore) : null,
@@ -244,7 +248,7 @@ function PlanPage() {
   if (error) return <ErrorBanner message={error} />;
   if (!game) return <LoadingState message="Loading game details..." />;
 
-  const formattedDate = new Date(game.date).toLocaleDateString(undefined, {
+  const formattedDate = formatGameDate(game.date, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -336,7 +340,13 @@ function PlanPage() {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4">
         {isEditing ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Game Date"
+                type="date"
+                value={editForm.date}
+                onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+              />
               <Input
                 label="Opponent"
                 type="text"
@@ -399,6 +409,7 @@ function PlanPage() {
                 onClick={() => {
                   setIsEditing(false);
                   setEditForm({
+                    date: toDateInputValue(game.date),
                     opponent: game.opponent || '',
                     homeScore: game.homeScore?.toString() || '',
                     awayScore: game.awayScore?.toString() || '',

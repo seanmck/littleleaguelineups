@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Game, calculateGameResult } from '@lineup/types';
 import { LoadingState, ErrorBanner, EmptyState, ButtonLink } from '../components/ui';
 import { apiFetch } from '../lib/api';
+import { formatGameDate } from '../lib/dates';
 
 function GamesListPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -29,13 +30,12 @@ function GamesListPage() {
       });
   }, [teamId]);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+  const formatDate = (dateStr: string) =>
+    formatGameDate(dateStr, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
     });
-  };
 
   const formatResult = (game: Game): string => {
     const result = calculateGameResult(game.homeScore, game.awayScore);

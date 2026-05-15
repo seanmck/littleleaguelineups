@@ -297,10 +297,11 @@ app.get('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
 // Update a game (opponent, scores, lineup, players)
 app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string; gameId: string }>, res: Response) => {
   const { gameId } = req.params;
-  const { opponent, homeScore, awayScore, lineup, lastBatterIndex, playerIds, innings, currentInning, atBatIdx } = req.body;
+  const { date, opponent, homeScore, awayScore, lineup, lastBatterIndex, playerIds, innings, currentInning, atBatIdx } = req.body;
 
   try {
     const updateData: {
+      date?: Date;
       opponent?: string | null;
       homeScore?: number | null;
       awayScore?: number | null;
@@ -313,6 +314,12 @@ app.put('/api/teams/:teamId/games/:gameId', async (req: Request<{ teamId: string
     } = {};
 
     // Only include fields that are provided
+    if (date !== undefined) {
+      if (!date || isNaN(Date.parse(date))) {
+        return res.status(400).json({ error: 'Invalid date' });
+      }
+      updateData.date = new Date(date);
+    }
     if (opponent !== undefined) updateData.opponent = opponent;
     if (homeScore !== undefined) updateData.homeScore = homeScore;
     if (awayScore !== undefined) updateData.awayScore = awayScore;
