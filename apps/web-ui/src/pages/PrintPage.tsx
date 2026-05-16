@@ -14,11 +14,25 @@ function findPlayerIdInPosition(ip: InningPositions, pos: Position): number | nu
   return v;
 }
 
+function findPositionForPlayer(ip: InningPositions, playerId: number): string {
+  for (const [pos, value] of Object.entries(ip)) {
+    if (Array.isArray(value)) {
+      if (value.includes(playerId)) return pos;
+    } else if (value === playerId) {
+      return pos;
+    }
+  }
+  return 'Bench';
+}
+
+type Layout = 'positions' | 'batting';
+
 function PrintPage() {
   const { teamId, gameId } = useParams();
   const [game, setGame] = useState<Game | null>(null);
   const [teamName, setTeamName] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<Layout>('positions');
 
   useEffect(() => {
     if (!teamId || !gameId) return;
@@ -104,16 +118,50 @@ function PrintPage() {
   return (
     <>
       {/* On-screen toolbar (hidden in print) */}
-      <div className="no-print max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="no-print max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
         <Link
           to={`/teams/${teamId}/games/${gameId}/plan`}
           className="text-green-700 hover:text-green-900 text-sm font-semibold transition-colors"
         >
           &larr; Back to plan
         </Link>
-        <Button variant="primary" onClick={() => window.print()}>
-          Print / Save PDF
-        </Button>
+        <div className="flex items-center gap-3">
+          <div
+            role="radiogroup"
+            aria-label="Layout"
+            className="inline-flex rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden text-sm font-semibold"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={layout === 'positions'}
+              onClick={() => setLayout('positions')}
+              className={`px-3 py-1.5 transition-colors ${
+                layout === 'positions'
+                  ? 'bg-green-700 text-white'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              By Position
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={layout === 'batting'}
+              onClick={() => setLayout('batting')}
+              className={`px-3 py-1.5 transition-colors border-l border-slate-200 ${
+                layout === 'batting'
+                  ? 'bg-green-700 text-white'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              By Batter
+            </button>
+          </div>
+          <Button variant="primary" onClick={() => window.print()}>
+            Print / Save PDF
+          </Button>
+        </div>
       </div>
 
       {/* The card itself: 8.5x11 portrait at print time */}
@@ -144,98 +192,162 @@ function PrintPage() {
           </div>
         </header>
 
-        {/* By-position grid */}
-        <section className="mb-5">
-          <h2 className="font-display text-xl tracking-wide mb-2 border-b border-slate-400 pb-1">
-            Field Positions
-          </h2>
-          <table
-            className="w-full border-collapse"
-            style={{ fontSize: '11pt', tableLayout: 'fixed' }}
-          >
-            <thead>
-              <tr>
-                <th
-                  className="text-left border border-slate-400 bg-slate-100 px-2 py-1"
-                  style={{ width: '0.7in' }}
-                >
-                  Pos
-                </th>
-                {inningsArray.map(i => (
-                  <th
-                    key={i}
-                    className="text-left border border-slate-400 bg-slate-100 px-2 py-1 font-display tracking-wide"
-                  >
-                    Inning {i + 1}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orderedPositions.map(pos => (
-                <tr key={pos}>
-                  <td className="border border-slate-400 px-2 py-1 font-bold text-center font-display tracking-wide">
-                    {pos}
-                  </td>
-                  {inningsArray.map(i => (
-                    <td
-                      key={`${pos}-${i}`}
-                      className="border border-slate-400 px-2 py-1 truncate"
+        {layout === 'positions' ? (
+          <>
+            {/* By-position grid */}
+            <section className="mb-5">
+              <h2 className="font-display text-xl tracking-wide mb-2 border-b border-slate-400 pb-1">
+                Field Positions
+              </h2>
+              <table
+                className="w-full border-collapse"
+                style={{ fontSize: '11pt', tableLayout: 'fixed' }}
+              >
+                <thead>
+                  <tr>
+                    <th
+                      className="text-left border border-slate-400 bg-slate-100 px-2 py-1"
+                      style={{ width: '0.7in' }}
                     >
-                      {renderCell(pos, i)}
-                    </td>
+                      Pos
+                    </th>
+                    {inningsArray.map(i => (
+                      <th
+                        key={i}
+                        className="text-left border border-slate-400 bg-slate-100 px-2 py-1 font-display tracking-wide"
+                      >
+                        Inning {i + 1}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedPositions.map(pos => (
+                    <tr key={pos}>
+                      <td className="border border-slate-400 px-2 py-1 font-bold text-center font-display tracking-wide">
+                        {pos}
+                      </td>
+                      {inningsArray.map(i => (
+                        <td
+                          key={`${pos}-${i}`}
+                          className="border border-slate-400 px-2 py-1 truncate"
+                        >
+                          {renderCell(pos, i)}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-              {/* Bench row */}
-              <tr>
-                <td className="border border-slate-400 px-2 py-1 font-bold text-center font-display tracking-wide bg-slate-50">
-                  Bench
-                </td>
-                {inningsArray.map(i => {
-                  const ip = lineup.innings[i];
-                  const bench = ip && Array.isArray(ip['Bench']) ? (ip['Bench'] as number[]) : [];
-                  return (
-                    <td
-                      key={`bench-${i}`}
-                      className="border border-slate-400 px-2 py-1 text-xs bg-slate-50"
-                    >
-                      {bench.map(id => playerById.get(id)?.name).filter(Boolean).join(', ')}
+                  {/* Bench row */}
+                  <tr>
+                    <td className="border border-slate-400 px-2 py-1 font-bold text-center font-display tracking-wide bg-slate-50">
+                      Bench
                     </td>
+                    {inningsArray.map(i => {
+                      const ip = lineup.innings[i];
+                      const bench = ip && Array.isArray(ip['Bench']) ? (ip['Bench'] as number[]) : [];
+                      return (
+                        <td
+                          key={`bench-${i}`}
+                          className="border border-slate-400 px-2 py-1 text-xs bg-slate-50"
+                        >
+                          {bench.map(id => playerById.get(id)?.name).filter(Boolean).join(', ')}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            {/* Batting order */}
+            <section className="mb-5">
+              <h2 className="font-display text-xl tracking-wide mb-2 border-b border-slate-400 pb-1">
+                Batting Order
+              </h2>
+              <ol
+                className="grid grid-cols-2 gap-x-6 gap-y-1"
+                style={{ fontSize: '11pt' }}
+              >
+                {lineup.battingOrder.map((pid, idx) => {
+                  const player = playerById.get(pid);
+                  return (
+                    <li
+                      key={pid}
+                      className="flex items-center gap-2 border-b border-slate-300 py-1"
+                    >
+                      <span className="font-display text-base w-6 text-right">
+                        {idx + 1}.
+                      </span>
+                      <span className="font-bold flex-1 truncate">
+                        {player?.name ?? '—'}
+                      </span>
+                    </li>
                   );
                 })}
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        {/* Batting order */}
-        <section className="mb-5">
-          <h2 className="font-display text-xl tracking-wide mb-2 border-b border-slate-400 pb-1">
-            Batting Order
-          </h2>
-          <ol
-            className="grid grid-cols-2 gap-x-6 gap-y-1"
-            style={{ fontSize: '11pt' }}
-          >
-            {lineup.battingOrder.map((pid, idx) => {
-              const player = playerById.get(pid);
-              return (
-                <li
-                  key={pid}
-                  className="flex items-center gap-2 border-b border-slate-300 py-1"
-                >
-                  <span className="font-display text-base w-6 text-right">
-                    {idx + 1}.
-                  </span>
-                  <span className="font-bold flex-1 truncate">
-                    {player?.name ?? '—'}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+              </ol>
+            </section>
+          </>
+        ) : (
+          /* By-batter table: batting order rows, position in each inning cell */
+          <section className="mb-5">
+            <h2 className="font-display text-xl tracking-wide mb-2 border-b border-slate-400 pb-1">
+              Lineup
+            </h2>
+            <table
+              className="w-full border-collapse"
+              style={{ fontSize: '11pt', tableLayout: 'fixed' }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    className="text-center border border-slate-400 bg-slate-100 px-2 py-1"
+                    style={{ width: '0.4in' }}
+                  >
+                    #
+                  </th>
+                  <th className="text-left border border-slate-400 bg-slate-100 px-2 py-1">
+                    Player
+                  </th>
+                  {inningsArray.map(i => (
+                    <th
+                      key={i}
+                      className="text-center border border-slate-400 bg-slate-100 px-2 py-1 font-display tracking-wide"
+                    >
+                      Inning {i + 1}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lineup.battingOrder.map((pid, idx) => {
+                  const player = playerById.get(pid);
+                  return (
+                    <tr key={pid}>
+                      <td className="border border-slate-400 px-2 py-1 text-center font-display tracking-wide">
+                        {idx + 1}
+                      </td>
+                      <td className="border border-slate-400 px-2 py-1 font-bold truncate">
+                        {player?.name ?? '—'}
+                      </td>
+                      {inningsArray.map(i => {
+                        const ip = lineup.innings[i];
+                        const pos = ip ? findPositionForPlayer(ip, pid) : '';
+                        return (
+                          <td
+                            key={`${pid}-${i}`}
+                            className="border border-slate-400 px-2 py-1 text-center font-display tracking-wide"
+                          >
+                            {pos}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        )}
 
         {/* Notes + signature footer */}
         <section
